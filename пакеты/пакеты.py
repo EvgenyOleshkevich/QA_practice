@@ -5,25 +5,35 @@ import time
 
 import matplotlib.pyplot as plt
 import numpy as np
+program = ""
 
+def is_equal_file_default(path1, path2):
+    file1 = open(path_res, 'r')  # tyt nado ykazuvat to chto nakhoditsa pod somneniem
+    file2 = open(etalon, 'r')  # tyt etalon
+    diff = difflib.ndiff(file1.readlines(), file2.readlines())
+    return ''.join(x for x in diff if x.startswith('- ')) == ""
 
-def Testing(program, test, path_res, etalon, count):
-    res = []
-    for i in range(1, count + 1):
+def is_equal_file_true(path1, path2): return True
+
+def Testing(test, res_i, etalon, paprams, cmp):
+    time_work = -1 * np.ones(param[1] + 1 - param[0])
+    is_complete = np.array([False ] * (param[1] + 1 - param[0]))
+    for i in range(0, param[1] + 1 - param[0]):
+        param = (i + params[0]).__str__()
+        res = res_i + param
         timer = time.clock()
-        subprocess.check_call([program, i.__str__(), test, path_res])
-        timer = time.clock() - timer
-        file1 = open(path_res, 'r')  # tyt nado ykazuvat to chto nakhoditsa pod somneniem
-        file2 = open(etalon, 'r')  # tyt etalon
+        subprocess.check_call([program, param, test, res])
+        time_work[i] = time.clock() - timer
+        is_complete[i] = cmp(path_res, etalon)
+    return [time_work, is_complete]
 
-        diff = difflib.ndiff(file1.readlines(), file2.readlines())
-        delta = ''.join(x for x in diff if x.startswith('- '))
-        if delta == "":
-            res.append(timer)
-        else:
-            res.append(-1)
-    return res
-
+def Testing(test, papram): # without output
+    time_work = -1 * np.ones(param[1] + 1 - param[0])
+    for i in range(0, param[1] + 1 - param[0]):
+        timer = time.clock()
+        subprocess.check_call([program, (i + params[0]).__str__(), test])
+        time_work[i] = time.clock() - timer
+    return time_work
 
 def с(program, tests, path_res, count):  # test = [test, etalon]
     matrix = []
@@ -55,6 +65,10 @@ def main():
     # result_path =  path
 
     # os.system(program)
+i = 7
+args = {'index': i}
+u = 'path %(index)s'
+print(u % args)
 
 
 if __name__ == "__main__":
