@@ -1,20 +1,19 @@
-import matplotlib.pyplot as plt
-import math
-import numpy as np
-import copy
+import difflib
 import os
 import subprocess
 import time
-import difflib
+
+import matplotlib.pyplot as plt
+import numpy as np
 
 
-def Testing(program, test, pathRes, etalon, count):
+def Testing(program, test, path_res, etalon, count):
     res = []
     for i in range(1, count + 1):
         timer = time.clock()
-        subprocess.check_call([program, i.__str__(), test, pathRes])
+        subprocess.check_call([program, i.__str__(), test, path_res])
         timer = time.clock() - timer
-        file1 = open(pathRes, 'r')  # tyt nado ykazuvat to chto nakhoditsa pod somneniem
+        file1 = open(path_res, 'r')  # tyt nado ykazuvat to chto nakhoditsa pod somneniem
         file2 = open(etalon, 'r')  # tyt etalon
 
         diff = difflib.ndiff(file1.readlines(), file2.readlines())
