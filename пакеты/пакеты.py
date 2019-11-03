@@ -1,15 +1,17 @@
 import difflib
 import os
+import random
 import subprocess
 import time
 import sys
 
 from PyQt5.QtCore import Qt
-from PyQt5.QtWidgets import (QWidget, QPushButton,
-                             QHBoxLayout, QVBoxLayout, QApplication, QLabel, QLineEdit, QSlider, QSizePolicy)
+from PyQt5.QtWidgets import *
 
 import matplotlib.pyplot as plt
 import numpy as np
+from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
+from matplotlib.figure import Figure
 
 
 def Testing(program, test, path_res, etalon, count):
@@ -138,13 +140,92 @@ class MainWindow(QWidget):
         self.test_params_slider.setValue(temp_value)
 
     def on_calc_click(self):
-        print("Clicked")#Сделать отправление в функцию main
+        result = ResultWindow()
+        result.show()
 
+
+class ResultWindow(QWidget):
+
+    def __init__(self, result_data):
+        super().__init__()
+        self.setGeometry(300, 200, 1280, 720)
+        self.result_list = QVBoxLayout()
+        for record in result_data:
+            self.result_list.addLayout(get_result_item(record))
+        groupBox = QGroupBox()
+        groupBox.setLayout(self.result_list)
+        self.scroll = QScrollArea()
+        self.scroll.setWidget(groupBox)
+        self.scroll.setWidgetResizable(True)
+
+
+        result_graph = PlotCanvas(self, width=7, height=7)
+        self.main_horizontal_layout = QHBoxLayout()
+        self.main_horizontal_layout.setAlignment(Qt.AlignRight)
+        self.main_horizontal_layout.addWidget(self.scroll)
+        self.main_horizontal_layout.addWidget(result_graph)
+        self.setLayout(self.main_horizontal_layout)
+
+
+class PlotCanvas(FigureCanvas):
+
+    def __init__(self, parent=None, width=7, height=7, dpi=100):
+        fig = Figure(figsize=(width, height), dpi=dpi)
+        self.axes = fig.add_subplot(111)
+
+        FigureCanvas.__init__(self, fig)
+        self.setParent(parent)
+
+        FigureCanvas.setSizePolicy(self,
+                                   QSizePolicy.Expanding,
+                                   QSizePolicy.Expanding)
+        FigureCanvas.updateGeometry(self)
+        self.plot()
+
+    def plot(self):
+        data = [random.random() for i in range(25)]
+        ax = self.figure.add_subplot(111)
+        ax.plot(data, 'r-')
+        ax.set_title('PyQt Matplotlib Example')
+        self.draw()
+
+
+def get_result_item(data):
+    item_layout = QHBoxLayout()
+
+    item_check_box = QCheckBox()
+    item_name = QLabel(str(data.name))
+    item_time = QLabel(str(data.time))
+    item_status = QLabel(str(data.status))
+    item_number = QLabel(str(data.number))
+
+    item_layout.addWidget(item_check_box)
+    item_layout.addWidget(item_name)
+    item_layout.addWidget(item_time)
+    item_layout.addWidget(item_status)
+    item_layout.addWidget(item_number)
+
+    return item_layout
+
+
+class data:
+    def __init__(self, name, time, status, number):
+        self.number = number
+        self.status = status
+        self.name = name
+        self.time = time
+
+
+# name = "test one",
+#     time = "5min 3sec"
+#     status = "complete"
+#     number = 1
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
 
-    ex = MainWindow()
+    testData = [data("test name", "5min 3sec", "complete", i + 1) for i in range(200)]
+    ex = ResultWindow(testData)
     ex.show()
     sys.exit(app.exec_())
     # main()
