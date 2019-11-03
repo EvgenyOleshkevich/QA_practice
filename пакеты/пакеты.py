@@ -68,7 +68,7 @@ class MainWindow(QWidget):
 
     def __init__(self):
         super().__init__()
-
+        self.result = None
         main_horizontal_layout = QHBoxLayout()
 
         main_vertical_layout = QVBoxLayout()
@@ -140,8 +140,9 @@ class MainWindow(QWidget):
         self.test_params_slider.setValue(temp_value)
 
     def on_calc_click(self):
-        result = ResultWindow()
-        result.show()
+        # Here will be request to backend
+        self.result = ResultWindow([Data("test name", "5min 3sec", "complete", i + 1) for i in range(200)])
+        self.result.show()
 
 
 class ResultWindow(QWidget):
@@ -157,7 +158,6 @@ class ResultWindow(QWidget):
         self.scroll = QScrollArea()
         self.scroll.setWidget(groupBox)
         self.scroll.setWidgetResizable(True)
-
 
         result_graph = PlotCanvas(self, width=7, height=7)
         self.main_horizontal_layout = QHBoxLayout()
@@ -208,7 +208,7 @@ def get_result_item(data):
     return item_layout
 
 
-class data:
+class Data:
     def __init__(self, name, time, status, number):
         self.number = number
         self.status = status
@@ -216,16 +216,9 @@ class data:
         self.time = time
 
 
-# name = "test one",
-#     time = "5min 3sec"
-#     status = "complete"
-#     number = 1
-
 if __name__ == "__main__":
     app = QApplication(sys.argv)
-
-    testData = [data("test name", "5min 3sec", "complete", i + 1) for i in range(200)]
-    ex = ResultWindow(testData)
+    ex = MainWindow()
     ex.show()
     sys.exit(app.exec_())
     # main()
