@@ -6,7 +6,7 @@ import sys
 
 from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import (QWidget, QPushButton,
-                             QHBoxLayout, QVBoxLayout, QApplication, QLabel, QLineEdit, QSlider)
+                             QHBoxLayout, QVBoxLayout, QApplication, QLabel, QLineEdit, QSlider, QSizePolicy)
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -62,12 +62,14 @@ def main():
     # os.system(program)
 
 
-class Example(QWidget):
+class MainWindow(QWidget):
 
     def __init__(self):
         super().__init__()
 
-        main_layout = QVBoxLayout()
+        main_horizontal_layout = QHBoxLayout()
+
+        main_vertical_layout = QVBoxLayout()
 
         test_scenario_label = QLabel("Test scenario path")
         self.test_scenario_path = QLineEdit()
@@ -75,7 +77,13 @@ class Example(QWidget):
         path_tests_label = QLabel("Path to file(folder) with test(tests)")
         self.path_tests_path = QLineEdit()
 
-        self.test_params_label = QLabel("Params")
+        test_params_layout = QHBoxLayout()
+        test_params_layout.addStretch(2)
+        self.test_params_label = QLabel("Current Param value")
+        self.test_params_value = QLineEdit()
+        self.test_params_value.textChanged.connect(self.on_value_changed)
+        test_params_layout.addWidget(self.test_params_label)
+        test_params_layout.addWidget(self.test_params_value)
 
         self.test_params_slider = QSlider(Qt.Horizontal, self)
         self.test_params_slider.setFocusPolicy(Qt.StrongFocus)
@@ -84,6 +92,7 @@ class Example(QWidget):
         self.test_params_slider.setSingleStep(1)
         self.test_params_slider.setMinimum(0)
         self.test_params_slider.setMaximum(100)
+        self.test_params_slider.setValue(50)
         self.test_params_slider.valueChanged[int].connect(self.on_slider_changed)
 
         path_answers_label = QLabel("Path to default test answers")
@@ -98,34 +107,44 @@ class Example(QWidget):
         calc_button = QPushButton("Calc")
         calc_button.clicked.connect(self.on_calc_click)
 
-        main_layout.addWidget(test_scenario_label)
-        main_layout.addWidget(self.test_scenario_path)
-        main_layout.addWidget(path_tests_label)
-        main_layout.addWidget(self.path_tests_path)
-        main_layout.addWidget(self.test_params_label)
-        main_layout.addWidget(self.test_params_slider)
-        main_layout.addWidget(path_answers_label)
-        main_layout.addWidget(self.path_answers_path)
-        main_layout.addWidget(path_result_label)
-        main_layout.addWidget(self.path_result_path)
-        main_layout.addWidget(path_comp_label)
-        main_layout.addWidget(self.path_comp_path)
-        main_layout.addWidget(calc_button)
+        main_vertical_layout.addWidget(test_scenario_label)
+        main_vertical_layout.addWidget(self.test_scenario_path)
+        main_vertical_layout.addWidget(path_tests_label)
+        main_vertical_layout.addWidget(self.path_tests_path)
+        main_vertical_layout.addLayout(test_params_layout)
+        main_vertical_layout.addWidget(self.test_params_slider)
+        main_vertical_layout.addWidget(path_answers_label)
+        main_vertical_layout.addWidget(self.path_answers_path)
+        main_vertical_layout.addWidget(path_result_label)
+        main_vertical_layout.addWidget(self.path_result_path)
+        main_vertical_layout.addWidget(path_comp_label)
+        main_vertical_layout.addWidget(self.path_comp_path)
+        main_vertical_layout.addWidget(calc_button)
 
-        self.setLayout(main_layout)
+        main_horizontal_layout.addLayout(main_vertical_layout)
+
+        self.setLayout(main_horizontal_layout)
         self.setGeometry(300, 200, 1280, 720)
         self.setWindowTitle('QLineEdit')
 
     def on_slider_changed(self):
-        self.test_params_label.setText(self.test_params_slider.value())
+        self.test_params_value.setText(str(self.test_params_slider.value()))
+
+    def on_value_changed(self):
+        try:
+            temp_value = int(self.test_params_value.text())
+        except ValueError:
+            temp_value = 0
+        self.test_params_slider.setValue(temp_value)
+
     def on_calc_click(self):
-        print(self.test_params_slider.value())
+        print("Clicked")#Сделать отправление в функцию main
 
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
 
-    ex = Example()
+    ex = MainWindow()
     ex.show()
     sys.exit(app.exec_())
     # main()
