@@ -15,155 +15,156 @@ from matplotlib.figure import Figure
 import shutil
 import json
 
-program = ""
-params = [0, 100]
-matrix_time = np.array([])
-matrix_is_complete = np.array([])
+class Kernel:
+    __program = ""
+    __params = [0, 100]
+    __matrix_time = np.array([])
+    __matrix_is_complete = np.array([])
 
-def is_equal_file_default(path1, path2):
-    file1 = open(path_res, 'r')  # tyt nado ykazuvat to chto nakhoditsa pod somneniem
-    file2 = open(etalon, 'r')  # tyt etalon
-    diff = difflib.ndiff(file1.readlines(), file2.readlines())
-    return ''.join(x for x in diff if x.startswith('- ')) == ""
 
-def is_equal_file_true(path1, path2): return True
-def is_equal_file_user(path):
-    def func(path1, path2):
-        return subprocess.check_output([path, path1, path2])
+    @staticmethod
+    def __is_equal_file_default(path1, path2):
+        file1 = open(path1, 'r')  # tyt nado ykazuvat to chto nakhoditsa pod somneniem
+        file2 = open(path2, 'r')  # tyt etalon
+        diff = difflib.ndiff(file1.readlines(), file2.readlines())
+        return ''.join(x for x in diff if x.startswith('- ')) == ""
 
-cmp = is_equal_file_default
+    @staticmethod
+    def __is_equal_file_true(path1, path2): return True
 
-def execute_test(test, res_i, etalon):
-    time_work = -1 * np.ones(param[1] + 1 - param[0])
-    is_complete = np.array([False ] * (param[1] + 1 - param[0]))
-    for i in range(0, param[1] + 1 - param[0]):
-        param = (i + params[0]).__str__()
-        res = res_i + "\\" + param + ".txt"
-        timer = time.clock()
-        #subprocess.check_call([program, param, test, res]) with exception
-        subprocess.call([program, param, test, res]) # without exception
-        time_work[i] = time.clock() - timer
-        is_complete[i] = cmp(path_res, etalon)
-    return time_work, is_complete
+    @staticmethod
+    def __is_equal_file_user(path):
+        def func(path1, path2):
+            return subprocess.check_output([path, path1, path2])
+        return func
 
-def execute_test(test): # without output
-    time_work = -1 * np.ones(param[1] + 1 - param[0])
-    for i in range(0, param[1] + 1 - param[0]):
-        timer = time.clock()
-        subprocess.call([program, (i + params[0]).__str__(), test])
-        time_work[i] = time.clock() - timer
-    return time_work
+    __cmp = __is_equal_file_default
 
-def start_tests(path_test, tests, path_res, path_etalon, etalons):
-    matrix_time = np.array(len(tests))
-    matrix_is_complete = np.array(len(tests))
-    stat = open(path_res + "\\statistica.txt", 'w')
-    for i in range(0, len(tests)):
-        test = path_test + tests[i]
-        etalon = path_etalon + etalons[i]
-        res = path_res + "\\" + i.__str__()
-        os.mkdir(res)
-        matrix[i], matrix_is_complete[i] = execute_test(test, res, etalon)
-        stat.write(tests[i] + "\n")
-        stat.write("time: " + matrix_time[i].__str__() + "\n")
-        stat.write("result: " + matrix_is_complete[i].__str__() + "\n")
-    stat.write("all time: " + np.sum(matrix_time, axis = 0).__str__())
-    stat.close()
 
-def start_tests(path_test, tests):
-    matrix = np.array(len(tests))
-    for i in range(0, len(tests)):
-        test = path_test + tests[i]
-        matrix[i] = execute_test(test)
-        stat.write(tests[i] + "\n")
-        stat.write("time: " + matrix_time[i].__str__() + "\n")
-    stat.write("all time: " + np.sum(matrix_time, axis = 0).__str__())
-    stat.close()
+    def __execute_test(self, test, res_i, reference):
+        time_work = -1 * np.ones(self.__params[1] + 1 - self.__params[0])
+        is_complete = np.array([False] * (self.__params[1] + 1 - self.__params[0]))
+        for i in range(0, self.__params[1] + 1 - self.__params[0]):
+            param = (i + self.__params[0]).__str__()
+            res = res_i + "\\" + param + ".txt"
+            timer = time.clock()
+            # subprocess.check_call([__program, param, test, res]) with exception
+            subprocess.call([self.__program, param, test, res])  # without exception
+            time_work[i] = time.clock() - timer
+            is_complete[i] = self.__cmp(res, reference)
+        return time_work, is_complete
 
-def get_time(mask):
-    return np.sum(matrix_time[mask], axis = 0)
+    def __execute_test(self, test):  # without output
+        time_work = -1 * np.ones(self.__params[1] + 1 - self.__params[0])
+        for i in range(0, self.__params[1] + 1 - self.__params[0]):
+            timer = time.clock()
+            subprocess.call([self.__program, (i + self.__params[0]).__str__(), test])
+            time_work[i] = time.clock() - timer
+        return time_work
 
-def get_time_tests(index):
-    return matrix_time[index]
 
-def get_results_tests(index):
-    return matrix_complete[index]
+    def __start_tests(self, path_test, tests, path_res, path_reference, references):
+        self.__matrix_time = np.array(len(tests))
+        self.__matrix_is_complete = np.array(len(tests))
+        stat = open(path_res + "\\statistic.txt", 'w')
+        for i in range(0, len(tests)):
+            test = path_test + tests[i]
+            reference = path_reference + references[i]
+            res = path_res + "\\" + i.__str__()
+            os.mkdir(res)
+            self.__matrix_time[i], self.__matrix_is_complete[i] = self.__execute_test(test, res, reference)
+            stat.write(tests[i] + "\n")
+            stat.write("time: " + self.__matrix_time[i].__str__() + "\n")
+            stat.write("result: " + self.__matrix_is_complete[i].__str__() + "\n")
+        stat.write("all time: " + np.sum(self.__matrix_time, axis=0).__str__())
+        stat.close()
 
-def main(path_test):
-    tests = [""]
-    if path_test.find(".") == -1: # check path_test is fold or file
-        tests = os.listdir(path_test)
-        path_test += "\\"
-    start_tests(path_test, tests)
 
-def main(path_exe, path_test, _params, path_res = os.getcwd() + "\\results", path_etalon = "", path_cmp = ""):
-    program = path_exe
-    params = _params
-    if path_etalon == "":
-        main(path_test)
-        return
-    shutil.rmtree(path_res)
-    os.mkdir(path_res)
-    tests = [""]
-    if path_test.find(".") == -1: # check path_test is fold or file
-        tests = os.listdir(path_test)
-        path_test += "\\"
+    def __start_tests(self, path_test, tests, path_res):
+        self.__matrix_time = np.array(len(tests))
+        stat = open(path_res + "\\statistic.txt", 'w')
+        for i in range(0, len(tests)):
+            test = path_test + tests[i]
+            self.__matrix_time[i] = self.__execute_test(test)
+            stat.write(tests[i] + "\n")
+            stat.write("time: " + self.__matrix_time[i].__str__() + "\n")
+        stat.write("all time: " + np.sum(self.__matrix_time, axis=0).__str__())
+        stat.close()
 
-    etalons = [""]
-    if path_etalon.find(".") == -1: # check path_etalon is fold or file
-        etalons = os.listdir(path_etalon)
-        path_etalon += "\\"
 
-    if path_cmp != "":
-        cmp = is_equal_file_user(path_cmp)
-    start_tests(path_test, tests, params, path_res, path_etalon, etalons, cmp)
+    def get_time(self, mask):
+        return np.sum(self.__matrix_time[mask], axis=0)
 
-def old_main():
-    path = input()
-    program = path + "\\main.exe"
-    t = os.listdir(path + "\\test")
-    files_test = []
-    for test in t:
-        files_test.append(path + "\\test\\" + test)
-    t = os.listdir(path + "\\check")
-    files_check = []
-    for test in t:
-        files_check.append(path + "\\check\\" + test)
-    tests = np.append([[], []], [files_test, files_check], axis=1).transpose()
-    out_path = path + "\\out\\out.txt"
-    с(program, tests, out_path, 4)
-    # result_path =  path
+    def get_time_tests(self, index):
+        return self.__matrix_time[index]
 
-    # os.system(program)
-path = os.getcwd() + "\\folder"
-stat = open(path + "\\statistica.txt", 'w')
-data = {
-     "param": {
-     "from": params[0],
-     "to": params[1]
-     }
-}
-json.dump(data, stat)
+    def get_results_tests(self, index):
+        return self.__matrix_is_complete[index]
 
-f1 = np.array([1, 2, 3, 4, 5]).__str__()
-f2 = np.array([True, False, True, True, False]).__str__()
-dic = {}
-dic["test1"] = [f1, f2]
-json.dump(dic, stat)
-stat.close()
-path = os.getcwd() + "\\folder"
-shutil.rmtree(path)
-os.mkdir(path + "aaa")
-t = os.listdir(os.getcwd())
-i = 7
-args = {'index': i}
-u = 'path %(index)s'
-print(u % args)
+    def start_test_by_path(self, path_test, path_res):
+        tests = [""]
+        if path_test.find(".") == -1:  # check path_test is fold or file
+            tests = os.listdir(path_test)
+            path_test += "\\"
+        self.__start_tests(path_test, tests, path_res)
+
+
+    def start_test_by_path(self, path_exe, path_test, params, path_res = os.getcwd() + "\\results", path_etalon="", path_cmp=""):
+        self.__program = path_exe
+        self.__params = params
+        shutil.rmtree(path_res)
+        os.mkdir(path_res)
+        if path_etalon == "":
+            self.start_test_by_path(path_test, path_res)
+            return
+
+        tests = [""]
+        if path_test.find(".") == -1:  # check path_test is fold or file
+            tests = os.listdir(path_test)
+            path_test += "\\"
+
+        reference = [""]
+        if path_etalon.find(".") == -1:  # check path_etalon is fold or file
+            reference = os.listdir(path_etalon)
+            path_etalon += "\\"
+
+        if path_cmp != "":
+            self.__cmp = self.__is_equal_file_user(path_cmp)
+        self.__start_tests(path_test, tests, self.__params, path_res, path_etalon, reference, self.__cmp)
+
+# result_path =  path
+# os.system(program)
+# path = os.getcwd() + "\\folder"
+# stat = open(path + "\\statistica.txt", 'w')
+# data = {
+#    "param": {
+#    "from": params[0],
+#    "to": params[1]
+#    }
+# }
+# json.dump(data, stat)
+
+# f1 = np.array([1, 2, 3, 4, 5]).__str__()
+# f2 = np.array([True, False, True, True, False]).__str__()
+# dic = {}
+# dic["test1"] = [f1, f2]
+# json.dump(dic, stat)
+# stat.close()
+# path = os.getcwd() + "\\folder"
+# shutil.rmtree(path)
+# os.mkdir(path + "aaa")
+# t = os.listdir(os.getcwd())
+# i = 7
+# args = {'index': i}
+# u = 'path %(index)s'
+# print(u % args)
 
 
 # Next code is UI
-class MainWindow(QWidget):
 
+
+class MainWindow(QWidget):
+    kernel = Kernel()
     def __init__(self):
         super().__init__()
         self.result = None
@@ -244,6 +245,11 @@ class MainWindow(QWidget):
             [TestConfiguration("test three", random.random(), random.random(), i + 1, i + 1) for i in range(10)],
             [TestConfiguration("test four", random.random(), random.random(), i + 1, i + 1) for i in range(10)]
         ]
+        path_exe = self.test_scenario_path.text()
+        path_test = self.path_tests_path.text()
+        params = self.test_params_slider.value()
+        #(self, path_exe, path_test, params, path_res = os.getcwd() + "\\results", path_etalon = "", path_cmp = ""):
+        self.kernel.start_test_by_path()
         # Here will be request to backend
         self.result = ResultWindow(one_data)
         self.result.show()
@@ -253,6 +259,7 @@ class ResultWindow(QWidget):
     def template(self, number, func):
         def f():
             return self.on_curve_show_change(number, func())
+
         return f
 
     def __init__(self, result_data):
@@ -316,6 +323,7 @@ class ResultWindow(QWidget):
 
         return item_layout
 
+
 class PlotCanvas(FigureCanvas):
 
     def __init__(self, width=7, height=7, dpi=80, data=None, curve_status_show=[]):
@@ -338,10 +346,6 @@ class PlotCanvas(FigureCanvas):
         ax.set_xlabel("Count of Cores")
         ax.grid()
         ax.set_title(str(curve_status_show[0]))
-
-
-
-
 
 
 class TestConfiguration:
