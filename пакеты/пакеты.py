@@ -64,6 +64,7 @@ def main():
     # os.system(program)
 
 
+# Next code is UI
 class MainWindow(QWidget):
 
     def __init__(self):
@@ -140,80 +141,119 @@ class MainWindow(QWidget):
         self.test_params_slider.setValue(temp_value)
 
     def on_calc_click(self):
+        one_data = [
+            [TestConfiguration("test one", random.random(), random.random(), i + 1, i + 1) for i in range(10)],
+            [TestConfiguration("test two", random.random(), random.random(), i + 1, i + 1) for i in range(10)],
+            [TestConfiguration("test three", random.random(), random.random(), i + 1, i + 1) for i in range(10)],
+            [TestConfiguration("test four", random.random(), random.random(), i + 1, i + 1) for i in range(10)]
+        ]
         # Here will be request to backend
-        self.result = ResultWindow([Data("test name", "5min 3sec", "complete", i + 1) for i in range(200)])
+        self.result = ResultWindow(one_data)
         self.result.show()
 
 
 class ResultWindow(QWidget):
+    def template(self, number, func):
+        def f():
+            return self.on_curve_show_change(number, func())
+        return f
 
     def __init__(self, result_data):
         super().__init__()
         self.setGeometry(300, 200, 1280, 720)
         self.result_list = QVBoxLayout()
-        for record in result_data:
-            self.result_list.addLayout(get_result_item(record))
-        groupBox = QGroupBox()
-        groupBox.setLayout(self.result_list)
+        for i in range(len(result_data)):
+            self.result_list.addLayout(
+                self.get_result_item(result_data[i], self.on_curve_show_change, i)
+            )
+
+        self.result = result_data
+
+        group_box = QGroupBox()
+        group_box.setLayout(self.result_list)
         self.scroll = QScrollArea()
-        self.scroll.setWidget(groupBox)
+        self.scroll.setWidget(group_box)
         self.scroll.setWidgetResizable(True)
 
-        result_graph = PlotCanvas(self, width=7, height=7)
+        self.curve_status_show = [True for i in range(len(result_data))]
+
+        self.result_graph = PlotCanvas(width=7, height=7, curve_status_show=self.curve_status_show, data=result_data)
         self.main_horizontal_layout = QHBoxLayout()
         self.main_horizontal_layout.setAlignment(Qt.AlignRight)
         self.main_horizontal_layout.addWidget(self.scroll)
-        self.main_horizontal_layout.addWidget(result_graph)
+        self.main_horizontal_layout.addWidget(self.result_graph)
+
         self.setLayout(self.main_horizontal_layout)
 
+    def on_curve_show_change(self, number_of_curve, status):
+        self.curve_status_show[number_of_curve] = status
+        self.main_horizontal_layout.removeWidget(self.result_graph)
+        self.result_graph = PlotCanvas(width=7, height=7, curve_status_show=self.curve_status_show, data=self.result)
+        self.main_horizontal_layout.addWidget(self.result_graph)
+
+    def get_result_item(self, data_list, call_back_checkbox, number_of_test):
+        item_layout = QHBoxLayout()
+        item_check_box = QCheckBox()
+        item_check_box.setChecked(True)
+        item_check_box.stateChanged.connect(
+            # lambda arg1=number_of_test, arg2=item_check_box.isChecked: call_back_checkbox(arg1, arg2()))
+            self.template(number_of_test, item_check_box.isChecked))
+        item_layout.addWidget(item_check_box)
+        sub_items_layout = QVBoxLayout()
+        for data in data_list:
+            sub_record_layout = QHBoxLayout()
+            item_name = QLabel(str(data.name))
+            item_time = QLabel(str(data.time))
+            item_status = QLabel(str(data.status))
+            item_number = QLabel(str(data.number))
+            item_number_cores = QLabel(str(data.count_of_cores))
+
+            sub_record_layout.addWidget(item_name)
+            sub_record_layout.addWidget(item_time)
+            sub_record_layout.addWidget(item_status)
+            sub_record_layout.addWidget(item_number)
+            sub_record_layout.addWidget(item_number_cores)
+
+            sub_items_layout.addLayout(sub_record_layout)
+        item_layout.addLayout(sub_items_layout)
+
+        return item_layout
 
 class PlotCanvas(FigureCanvas):
 
-    def __init__(self, parent=None, width=7, height=7, dpi=100):
+    def __init__(self, width=7, height=7, dpi=80, data=None, curve_status_show=[]):
         fig = Figure(figsize=(width, height), dpi=dpi)
-        self.axes = fig.add_subplot(111)
-
         FigureCanvas.__init__(self, fig)
-        self.setParent(parent)
 
-        FigureCanvas.setSizePolicy(self,
-                                   QSizePolicy.Expanding,
-                                   QSizePolicy.Expanding)
-        FigureCanvas.updateGeometry(self)
-        self.plot()
-
-    def plot(self):
-        data = [random.random() for i in range(25)]
-        ax = self.figure.add_subplot(111)
-        ax.plot(data, 'r-')
-        ax.set_title('PyQt Matplotlib Example')
+        self.plot(data, curve_status_show)
         self.draw()
 
+    def plot(self, data_list, curve_status_show):
+        ax = self.figure.add_subplot(111)
+        for test in range(len(data_list)):
+            if curve_status_show[test]:
+                # Question with indexes
+                x = np.array([current_test.count_of_cores for current_test in data_list[test]])
+                y = np.array([current_test.time for current_test in data_list[test]])
+                ax.plot(x, y)
 
-def get_result_item(data):
-    item_layout = QHBoxLayout()
-
-    item_check_box = QCheckBox()
-    item_name = QLabel(str(data.name))
-    item_time = QLabel(str(data.time))
-    item_status = QLabel(str(data.status))
-    item_number = QLabel(str(data.number))
-
-    item_layout.addWidget(item_check_box)
-    item_layout.addWidget(item_name)
-    item_layout.addWidget(item_time)
-    item_layout.addWidget(item_status)
-    item_layout.addWidget(item_number)
-
-    return item_layout
+        ax.set_ylabel("Execution time")
+        ax.set_xlabel("Count of Cores")
+        ax.grid()
+        ax.set_title(str(curve_status_show[0]))
 
 
-class Data:
-    def __init__(self, name, time, status, number):
-        self.number = number
-        self.status = status
+
+
+
+
+class TestConfiguration:
+    def __init__(self, name, time, status, number, count_of_cores):
         self.name = name
         self.time = time
+        self.status = status
+        self.number = number
+        self.count_of_cores = count_of_cores
 
 
 if __name__ == "__main__":
