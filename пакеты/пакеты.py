@@ -42,18 +42,6 @@ class Data:
 
 class Kernel:
 
-    def __init__(self):
-        self.__program = ""
-        self.__output = ""
-        self.__params = [0, 0]
-        self.__matrix_time = np.array([])
-        self.__matrix_is_complete = np.array([])
-        self.__progress_callback = None
-        self.__complete = 0
-        self.__count_tests = 0
-        self.__cmp = None
-
-
     @staticmethod
     def __is_equal_file_default(path1, path2):
         file1 = open(path1, 'r')  # tyt nado ykazuvat to chto nakhoditsa pod somneniem
@@ -72,11 +60,24 @@ class Kernel:
 
         return func
 
+    def __init__(self):
+        self.__program = ""
+        self.__output = ""
+        self.params = np.array([int(1), int(1)])
+        self.__matrix_time = np.array([])
+        self.__matrix_is_complete = np.array([])
+        self.__progress_callback = None
+        self.__complete = 0
+        self.__count_tests = 0
+        self.__cmp = self.__is_equal_file_default
+
+    # array = [True for i in range(n)]
+
     def __execute_test(self, test, res_i, reference):
-        time_work = -1 * np.ones(self.__params[1] + 1 - self.__params[0])
-        is_complete = np.array([False] * (self.__params[1] + 1 - self.__params[0]))
-        for i in range(0, self.__params[1] + 1 - self.__params[0]):
-            param = (i + self.__params[0]).__str__()
+        time_work = -1 * np.ones(int(self.params[1] + 1 - self.params[0]))
+        is_complete = np.array([False for i in range(int(self.params[1] + 1 - self.params[0]))])
+        for i in range(int(self.params[1] + 1 - self.params[0])):
+            param = (i + self.params[0]).__str__()
             res = res_i + "\\" + param + ".txt"
             timer = time.clock()
             # subprocess.check_call([__program, param, test, res]) with exception
@@ -85,41 +86,47 @@ class Kernel:
             is_complete[i] = self.__cmp(res, reference)
             self.__complete += 1
             self.__progress_callback(self.__complete, self.__count_tests)
-        return time_work, is_complete
+        return [time_work, is_complete]
 
-    def __execute_test(self, test):  # without output
-        time_work = -1 * np.ones(self.__params[1] + 1 - self.__params[0])
-        for i in range(0, self.__params[1] + 1 - self.__params[0]):
+    def __execute_test_wo_ref(self, test):  # without output
+        time_work = -1 * np.ones(int(self.params[1] + 1 - self.params[0]))
+        for i in range(int(self.params[1] + 1 - self.params[0])):
             timer = time.clock()
-            subprocess.call([self.__program, (i + self.__params[0]).__str__(), test])
+            subprocess.call([self.__program, (i + self.params[0]).__str__(), test])
             time_work[i] = time.clock() - timer
             self.__complete += 1
             self.__progress_callback(self.__complete, self.__count_tests)
         return time_work
 
     def __start_tests(self, path_test, tests, path_reference, references):
-        self.__matrix_time = np.array(len(tests))
-        self.__matrix_is_complete = np.array(len(tests))
-        stat = open(self.path_res + "statistic.txt", 'w')
-        stat.write(self.__params.__str__() + "\n")
+        self.__matrix_time = np.array([np.zeros(self.params[1] + 1 - self.params[0])])
+        self.__matrix_is_complete = np.array([np.zeros(self.params[1] + 1 - self.params[0])])
+        stat = open(self.__output + "statistic.txt", 'w')
+        stat.write(self.params.__str__() + "\n")
         for i in range(0, len(tests)):
             test = path_test + tests[i]
             reference = path_reference + references[i]
             res = self.__output + i.__str__()
             os.mkdir(res)
-            self.__matrix_time[i], self.__matrix_is_complete[i] = self.__execute_test(test, res, reference)
+            a, b = self.__execute_test(test, res, reference)
+            self.__matrix_time = np.append(self.__matrix_time, [a], axis=0)
+            self.__matrix_is_complete = np.append(self.__matrix_is_complete, [b], axis=0)
+            #self.__matrix_is_complete[i] = b
             stat.write(tests[i] + "\n")
-            stat.write("time: " + self.__matrix_time[i].__str__() + "\n")
-            stat.write("result: " + self.__matrix_is_complete[i].__str__() + "\n")
+            stat.write("time: " + self.__matrix_time[i + 1].__str__() + "\n")
+            stat.write("result: " + self.__matrix_is_complete[i + 1].__str__() + "\n")
+        self.__matrix_time = np.delete(self.__matrix_time, (0), axis=0)
+        self.__matrix_is_complete = np.delete(self.__matrix_is_complete, (0), axis=0)
         stat.write("all time: " + np.sum(self.__matrix_time, axis=0).__str__())
         stat.close()
 
-    def __start_tests(self, path_test, tests):
+
+    def __start_tests_wo_ref(self, path_test, tests):
         self.__matrix_time = np.array(len(tests))
         stat = open(self.__output + "statistic.txt", 'w')
         for i in range(0, len(tests)):
             test = path_test + tests[i]
-            self.__matrix_time[i] = self.__execute_test(test)
+            self.__matrix_time[i] = self.__execute_test_wo_ref(test)
             stat.write(tests[i] + "\n")
             stat.write("time: " + self.__matrix_time[i].__str__() + "\n")
         stat.write("all time: " + np.sum(self.__matrix_time, axis=0).__str__())
@@ -128,20 +135,18 @@ class Kernel:
     def __validation(self, path_test, path_reference, path_cmp):
         is_valid = True
         is_valid &= os.path.isfile(self.__program)
-        is_valid &= len(self.__params) == 2
+        is_valid &= len(self.params) == 2
         if not os.path.isdir(self.__output):
             self.__output = os.getcwd() + "\\results"
         is_valid &= os.path.exists(path_test)
         is_valid &= path_reference == "" or os.path.exists(path_reference)
         if os.path.isfile(path_cmp):
-            cmp = self.__is_equal_file_user(path_cmp)
-        else:
-            cmp = self.__is_equal_file_default
+            self.__cmp = self.__is_equal_file_user(path_cmp)
         return is_valid
 
     def start_test_by_path(self, path_exe, path_test, params, path_res, path_reference, path_cmp, lambda_callback):
         self.__program = path_exe
-        self.__params = [1, params]
+        self.params[1] = int(params)
         self.__output = path_res
         self.__progress_callback = lambda_callback
         if not self.__validation(path_test, path_reference, path_cmp):
@@ -156,15 +161,15 @@ class Kernel:
             tests = os.listdir(path_test)
             path_test += "\\"
 
-        __complete = 0
-        __count_tests = len(tests) * (self.__params[1] - self.__params[0])
+        self.__complete = 0
+        self.__count_tests = len(tests) * (self.params[1] - self.params[0] + 1)
 
         if path_reference == "":
-            self.__start_tests(path_test, tests)
+            self.__start_tests_wo_ref(path_test, tests)
             return Data(self.__matrix_time, self.__matrix_is_complete, path_test + "statistic.txt")
 
         reference = [""]
-        if path_reference.find(".") == -1:  # check path_reference is fold or file
+        if path_reference.find(".") == -1:  # check path_reference is    fold or file
             reference = os.listdir(path_reference)
             path_reference += "\\"
 
@@ -179,19 +184,24 @@ class ProgressWindow(QWidget):
 
     def __init__(self):
         super().__init__()
-        main_vertical_layout = QVBoxLayout()
+        self.main_vertical_layout = QVBoxLayout()
         self.progress_bar = QProgressBar()
         self.progress_label = QLabel("Сделано столько то тестов")
-        main_vertical_layout.addWidget(self.progress_label)
-        main_vertical_layout.addWidget(self.progress_bar)
-        self.setLayout(main_vertical_layout)
+        self.main_vertical_layout.addWidget(self.progress_label)
+        self.main_vertical_layout.addWidget(self.progress_bar)
+        self.setLayout(self.main_vertical_layout)
 
     def set_test_status(self, complete, number_of_test):
+        self.main_vertical_layout.removeWidget(self.progress_bar)
+        self.main_vertical_layout.removeWidget(self.progress_label)
         self.progress_bar.setValue(complete)
         self.progress_label.setText(f"Complete {complete} tests of {number_of_test}")
+        self.main_vertical_layout.addWidget(self.progress_label)
+        self.main_vertical_layout.addWidget(self.progress_bar)
 
     def get_test_setter(self):
         return self.set_test_status
+
 
 class MainWindow(QWidget):
     kernel = Kernel()
@@ -279,16 +289,19 @@ class MainWindow(QWidget):
             [TestConfiguration("test three", random.random(), random.random(), i + 1, i + 1) for i in range(10)],
             [TestConfiguration("test four", random.random(), random.random(), i + 1, i + 1) for i in range(10)]
         ]
-        path_exe = self.test_scenario_path.text()
-        path_test = self.path_tests_path.text()
-        params = self.test_params_slider.value()
-        path_reference = self.path_answers_path.text()
+        # path_exe = self.test_scenario_path.text()
+        path_exe = "C:\\Users\\Vladimir\\Desktop\\QA_practice\\пакеты\\test\\main.exe"
+        # path_test = self.path_tests_path.text()
+        path_test = "C:\\Users\\Vladimir\\Desktop\\QA_practice\\пакеты\\test\\test"
+        params = 4  # self.test_params_slider.value()
+        path_reference = "C:\\Users\\Vladimir\\Desktop\\QA_practice\\пакеты\\test\\reference"  # self.path_answers_path.text()
         path_res = self.path_result_path.text()
         cmp = self.path_comp_path.text()
 
         progWind = ProgressWindow()
         progWind.show()
-        res = self.kernel.start_test_by_path(path_exe, path_test, params, path_res, path_reference, cmp, progWind.get_test_setter())
+        res = self.kernel.start_test_by_path(path_exe, path_test, params, path_res, path_reference, cmp,
+                                             progWind.get_test_setter())
         progWind.close()
 
         if res == None:
