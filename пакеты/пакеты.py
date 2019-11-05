@@ -206,6 +206,7 @@ class MainWindow(QWidget):
 
     def __init__(self):
         super().__init__()
+        self.error_window = ErrorWindow()
         self.progressive_window = ProgressWindow()
         self.result = None
         main_horizontal_layout = QHBoxLayout()
@@ -296,10 +297,10 @@ class MainWindow(QWidget):
 
     def on_calc_click(self):
         one_data = [
-            [TestConfiguration("test one", random.random(), "Complete", i + 1, i + 1) for i in range(10)],
-            [TestConfiguration("test two", random.random(), "Complete", i + 1, i + 1) for i in range(10)],
-            [TestConfiguration("test three", random.random(), "Complete", i + 1, i + 1) for i in range(10)],
-            [TestConfiguration("test four", random.random(), "Complete", i + 1, i + 1) for i in range(10)]
+            [TestConfiguration("test one", random.random(), "Complete", i + 1, i + i * i) for i in range(10)],
+            [TestConfiguration("test two", random.random(), "Complete", i + 1, i + i * i) for i in range(10)],
+            [TestConfiguration("test three", random.random(), "Complete", i + 1, i + i * i) for i in range(10)],
+            [TestConfiguration("test four", random.random(), "Complete", i + 1, i + i * i) for i in range(10)]
         ]
         # path_exe = self.test_scenario_path.text()
         # "C:\\Users\\Vladimir\\Desktop\\QA_practice\\пакеты\\test\\test"
@@ -317,12 +318,11 @@ class MainWindow(QWidget):
         # self.progressive_window.close()
 
         if res == None:
-            do_smth = "print param is invalid"
+            self.error_window.show()
         else:
             self.data.append(res)
-        # Here will be request to backend
-        self.result = ResultWindow(one_data)
-        self.result.show()
+            self.result = ResultWindow(one_data)
+            self.result.show()
 
 
 class ResultWindow(QWidget):
@@ -357,12 +357,14 @@ class ResultWindow(QWidget):
         self.main_horizontal_layout.setAlignment(Qt.AlignRight)
         self.main_horizontal_layout.addWidget(self.scroll)
         self.main_horizontal_layout.addWidget(self.result_graph)
+        self.main_horizontal_layout.setAlignment(Qt.AlignLeft)
 
         self.setLayout(self.main_horizontal_layout)
 
     def on_curve_show_change(self, number_of_curve, status):
         self.curve_status_show[number_of_curve] = status
         self.main_horizontal_layout.removeWidget(self.result_graph)
+        self.result_graph.resize(0, 0)
         self.result_graph = PlotCanvas(width=10, height=10, curve_status_show=self.curve_status_show, data=self.result)
         self.main_horizontal_layout.addWidget(self.result_graph)
 
@@ -381,10 +383,10 @@ class ResultWindow(QWidget):
         for data in data_list:
             sub_record_layout = QHBoxLayout()
             item_name = QLabel(str(data.name))
-            item_time = QLabel(str(data.time))
+            item_time = QLabel(f"Execution time: {round(data.time, 6)}")
             item_status = QLabel(str(data.status))
             item_number = QLabel(str(data.number))
-            item_number_cores = QLabel(str(data.count_of_cores))
+            item_number_cores = QLabel(f"Count of cores: {data.count_of_cores}")
 
             sub_record_layout.addWidget(item_name)
             sub_record_layout.addWidget(item_time)
@@ -411,15 +413,25 @@ class PlotCanvas(FigureCanvas):
         ax = self.figure.add_subplot(111)
         for test in range(len(data_list)):
             if curve_status_show[test]:
-                # Question with indexes
                 x = np.array([current_test.count_of_cores for current_test in data_list[test]])
                 y = np.array([current_test.time for current_test in data_list[test]])
-                ax.plot(x, y)
+                ax.plot(x, y, label=f"Test №{test + 1}")
 
+        ax.legend()
         ax.set_ylabel("Execution time")
         ax.set_xlabel("Count of Cores")
         ax.grid()
-        ax.set_title(str(curve_status_show[0]))
+        ax.set_title("Tasks Graph")
+
+
+class ErrorWindow(QWidget):
+    def __init__(self):
+        super().__init__()
+        layout = QVBoxLayout()
+        layout.addWidget(QLabel("Input data is not valid!"))
+        self.setLayout(layout)
+        self.setGeometry(600, 500, 200, 50)
+        self.setWindowTitle("Error!")
 
 
 class TestConfiguration:
