@@ -14,30 +14,30 @@ from matplotlib.figure import Figure
 
 
 class Data:
-    __matrix_time = None
-    __matrix_is_complete = None
-    __path_statistic = None
+    matrix_time = None
+    matrix_is_complete = None
+    path_statistic = None
 
-    def get_time(self, mask): return np.sum(self.__matrix_time[mask], axis=0)
+    def get_time(self, mask): return np.sum(self.matrix_time[mask], axis=0)
 
-    def get_time_tests(self, index): return self.__matrix_time[index]
+    def get_time_tests(self, index): return self.matrix_time[index]
 
-    def get_results_tests(self, index): return self.__matrix_is_complete[index]
+    def get_results_tests(self, index): return self.matrix_is_complete[index]
 
     def clear_data(self):
-        self.__matrix_time.clear()
-        self.__matrix_is_complete.clear()
+        self.matrix_time.clear()
+        self.matrix_is_complete.clear()
 
     def download_data(self):
-        file = open(self.__path_statistic, 'r')
+        file = open(self.path_statistic, 'r')
         b, g = file.readline()
         # finish writing
 
     def __init__(self, matrix_time, matrix_is_complete, path_statistic):
         super().__init__()
-        __matrix_time = matrix_time
-        __matrix_is_complete = matrix_is_complete
-        __path_statistic = path_statistic
+        self.matrix_time = matrix_time
+        self.matrix_is_complete = matrix_is_complete
+        self.path_statistic = path_statistic
 
 
 class Kernel:
@@ -111,7 +111,7 @@ class Kernel:
             a, b = self.__execute_test(test, res, reference)
             self.__matrix_time = np.append(self.__matrix_time, [a], axis=0)
             self.__matrix_is_complete = np.append(self.__matrix_is_complete, [b], axis=0)
-            #self.__matrix_is_complete[i] = b
+            # self.__matrix_is_complete[i] = b
             stat.write(tests[i] + "\n")
             stat.write("time: " + self.__matrix_time[i + 1].__str__() + "\n")
             stat.write("result: " + self.__matrix_is_complete[i + 1].__str__() + "\n")
@@ -119,7 +119,6 @@ class Kernel:
         self.__matrix_is_complete = np.delete(self.__matrix_is_complete, (0), axis=0)
         stat.write("all time: " + np.sum(self.__matrix_time, axis=0).__str__())
         stat.close()
-
 
     def __start_tests_wo_ref(self, path_test, tests):
         self.__matrix_time = np.array(len(tests))
@@ -185,19 +184,17 @@ class ProgressWindow(QWidget):
     def __init__(self):
         super().__init__()
         self.main_vertical_layout = QVBoxLayout()
-        self.progress_bar = QProgressBar()
+        self.progress_bar = QProgressBar(self)
         self.progress_label = QLabel("Сделано столько то тестов")
         self.main_vertical_layout.addWidget(self.progress_label)
         self.main_vertical_layout.addWidget(self.progress_bar)
         self.setLayout(self.main_vertical_layout)
+        self.setWindowTitle("Progress:")
+        self.setGeometry(400, 400, 300, 70)
 
     def set_test_status(self, complete, number_of_test):
-        self.main_vertical_layout.removeWidget(self.progress_bar)
-        self.main_vertical_layout.removeWidget(self.progress_label)
-        self.progress_bar.setValue(complete)
+        self.progress_bar.setValue(complete * 100 / number_of_test)
         self.progress_label.setText(f"Complete {complete} tests of {number_of_test}")
-        self.main_vertical_layout.addWidget(self.progress_label)
-        self.main_vertical_layout.addWidget(self.progress_bar)
 
     def get_test_setter(self):
         return self.set_test_status
@@ -209,6 +206,7 @@ class MainWindow(QWidget):
 
     def __init__(self):
         super().__init__()
+        self.progressive_window = ProgressWindow()
         self.result = None
         main_horizontal_layout = QHBoxLayout()
 
@@ -221,12 +219,13 @@ class MainWindow(QWidget):
         self.path_tests_path = QLineEdit()
 
         test_params_layout = QHBoxLayout()
-        test_params_layout.addStretch(2)
+        test_params_layout.addStretch(0)
         self.test_params_label = QLabel("Current Param value")
         self.test_params_value = QLineEdit()
         self.test_params_value.textChanged.connect(self.on_value_changed)
         test_params_layout.addWidget(self.test_params_label)
         test_params_layout.addWidget(self.test_params_value)
+        test_params_layout.addStretch(20)
 
         self.test_params_slider = QSlider(Qt.Horizontal, self)
         self.test_params_slider.setFocusPolicy(Qt.StrongFocus)
@@ -250,18 +249,31 @@ class MainWindow(QWidget):
         calc_button = QPushButton("Calc")
         calc_button.clicked.connect(self.on_calc_click)
 
+        main_vertical_layout.addStretch(1)
         main_vertical_layout.addWidget(test_scenario_label)
+        main_vertical_layout.addStretch(0)
         main_vertical_layout.addWidget(self.test_scenario_path)
+        main_vertical_layout.addStretch(1)
         main_vertical_layout.addWidget(path_tests_label)
+        main_vertical_layout.addStretch(0)
         main_vertical_layout.addWidget(self.path_tests_path)
+        main_vertical_layout.addStretch(1)
         main_vertical_layout.addLayout(test_params_layout)
+        main_vertical_layout.addStretch(0)
         main_vertical_layout.addWidget(self.test_params_slider)
+        main_vertical_layout.addStretch(1)
         main_vertical_layout.addWidget(path_answers_label)
+        main_vertical_layout.addStretch(0)
         main_vertical_layout.addWidget(self.path_answers_path)
+        main_vertical_layout.addStretch(1)
         main_vertical_layout.addWidget(path_result_label)
+        main_vertical_layout.addStretch(0)
         main_vertical_layout.addWidget(self.path_result_path)
+        main_vertical_layout.addStretch(1)
         main_vertical_layout.addWidget(path_comp_label)
+        main_vertical_layout.addStretch(0)
         main_vertical_layout.addWidget(self.path_comp_path)
+        main_vertical_layout.addStretch(1)
         main_vertical_layout.addWidget(calc_button)
 
         main_horizontal_layout.addLayout(main_vertical_layout)
@@ -290,6 +302,7 @@ class MainWindow(QWidget):
             [TestConfiguration("test four", random.random(), random.random(), i + 1, i + 1) for i in range(10)]
         ]
         # path_exe = self.test_scenario_path.text()
+        # "C:\\Users\\Vladimir\\Desktop\\QA_practice\\пакеты\\test\\test"
         path_exe = "C:\\Users\\Vladimir\\Desktop\\QA_practice\\пакеты\\test\\main.exe"
         # path_test = self.path_tests_path.text()
         path_test = "C:\\Users\\Vladimir\\Desktop\\QA_practice\\пакеты\\test\\test"
@@ -298,11 +311,10 @@ class MainWindow(QWidget):
         path_res = self.path_result_path.text()
         cmp = self.path_comp_path.text()
 
-        progWind = ProgressWindow()
-        progWind.show()
+        # self.progressive_window.show()
         res = self.kernel.start_test_by_path(path_exe, path_test, params, path_res, path_reference, cmp,
-                                             progWind.get_test_setter())
-        progWind.close()
+                                             self.progressive_window.get_test_setter())
+        # self.progressive_window.close()
 
         if res == None:
             do_smth = "print param is invalid"
@@ -326,8 +338,9 @@ class ResultWindow(QWidget):
         self.result_list = QVBoxLayout()
         for i in range(len(result_data)):
             self.result_list.addLayout(
-                self.get_result_item(result_data[i], self.on_curve_show_change, i)
+                self.get_result_item(result_data[i], i)
             )
+            self.result_list.addSpacing(35)
 
         self.result = result_data
 
@@ -339,7 +352,7 @@ class ResultWindow(QWidget):
 
         self.curve_status_show = [True for i in range(len(result_data))]
 
-        self.result_graph = PlotCanvas(width=7, height=7, curve_status_show=self.curve_status_show, data=result_data)
+        self.result_graph = PlotCanvas(width=10, height=10, curve_status_show=self.curve_status_show, data=result_data)
         self.main_horizontal_layout = QHBoxLayout()
         self.main_horizontal_layout.setAlignment(Qt.AlignRight)
         self.main_horizontal_layout.addWidget(self.scroll)
@@ -353,14 +366,17 @@ class ResultWindow(QWidget):
         self.result_graph = PlotCanvas(width=7, height=7, curve_status_show=self.curve_status_show, data=self.result)
         self.main_horizontal_layout.addWidget(self.result_graph)
 
-    def get_result_item(self, data_list, call_back_checkbox, number_of_test):
+    def get_result_item(self, data_list, number_of_test):
         item_layout = QHBoxLayout()
         item_check_box = QCheckBox()
+        left_vertical_layout = QVBoxLayout()
         item_check_box.setChecked(True)
         item_check_box.stateChanged.connect(
-            # lambda arg1=number_of_test, arg2=item_check_box.isChecked: call_back_checkbox(arg1, arg2()))
             self.template(number_of_test, item_check_box.isChecked))
-        item_layout.addWidget(item_check_box)
+        left_vertical_layout.addWidget(item_check_box)
+        left_vertical_layout.addStretch(1)
+        item_layout.addLayout(left_vertical_layout)
+        item_layout.addStretch(0)
         sub_items_layout = QVBoxLayout()
         for data in data_list:
             sub_record_layout = QHBoxLayout()
@@ -378,7 +394,7 @@ class ResultWindow(QWidget):
 
             sub_items_layout.addLayout(sub_record_layout)
         item_layout.addLayout(sub_items_layout)
-
+        item_layout.addStretch(0)
         return item_layout
 
 
