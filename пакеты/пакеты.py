@@ -1,22 +1,16 @@
 import difflib
 import os
 import random
+import shutil
 import subprocess
-import time
 import sys
+import time
 
-path = "C:\Users\Евгений\Desktop\Программы\AM-MP.2semestr\QA_practic\пакеты\test"
-test = os.listdir(path)
-
+import numpy as np
 from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import *
-
-import matplotlib.pyplot as plt
-import numpy as np
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
-import shutil
-import json
 
 
 class Data:
@@ -30,11 +24,11 @@ class Data:
 
     def get_results_tests(self, index): return self.__matrix_is_complete[index]
 
-    def clear_data():
-        __matrix_time.clear()
-        __matrix_is_complete.clear()
+    def clear_data(self):
+        self.__matrix_time.clear()
+        self.__matrix_is_complete.clear()
 
-    def download_data():
+    def download_data(self):
         file = open(self.__path_statistic, 'r')
         b, g = file.readline()
         # finish writing
@@ -97,12 +91,12 @@ class Kernel:
     def __start_tests(self, path_test, tests, path_reference, references):
         self.__matrix_time = np.array(len(tests))
         self.__matrix_is_complete = np.array(len(tests))
-        stat = open(path_res + "statistic.txt", 'w')
+        stat = open(self.path_res + "statistic.txt", 'w')
         stat.write(self.__params.__str__() + "\n")
         for i in range(0, len(tests)):
             test = path_test + tests[i]
             reference = path_reference + references[i]
-            res = path_res + i.__str__()
+            res = self.__output + i.__str__()
             os.mkdir(res)
             self.__matrix_time[i], self.__matrix_is_complete[i] = self.__execute_test(test, res, reference)
             stat.write(tests[i] + "\n")
@@ -125,15 +119,15 @@ class Kernel:
     def __validation(self, path_test, path_reference, path_cmp):
         is_valid = True
         is_valid &= os.path.isfile(self.__program)
-        is_valid &= len(params) == 2
+        is_valid &= len(self.params) == 2
         if not os.path.isdir(self.__output):
             self.__output = os.getcwd() + "\\results"
         is_valid &= os.path.exists(self.path_test)
         is_valid &= os.path.exists(self.path_reference) | path_reference == ""
         if os.path.isfile(self.path_cmp):
-            cmp = __is_equal_file_user(path_cmp)
+            cmp = self.__is_equal_file_user(path_cmp)
         else:
-            cmp = __is_equal_file_default
+            cmp = self.__is_equal_file_default
             return is_valid
 
     def start_test_by_path(self, path_exe, path_test, params, path_res, path_reference, path_cmp):
@@ -153,7 +147,7 @@ class Kernel:
 
         if path_reference == "":
             self.__start_tests(path_test, tests)
-            return Data(__matrix_time, __matrix_is_complete, path_test + "statistic.txt")
+            return Data(self.__matrix_time, self.__matrix_is_complete, path_test + "statistic.txt")
 
         reference = [""]
         if path_reference.find(".") == -1:  # check path_etalon is fold or file
@@ -161,7 +155,7 @@ class Kernel:
             path_reference += "\\"
 
         self.__start_tests(path_test, tests, self.__params, path_reference, reference, self.__cmp)
-        return Data(__matrix_time, __matrix_is_complete, path_test + "statistic.txt")
+        return Data(self.__matrix_time, self.__matrix_is_complete, path_test + "statistic.txt")
 
 
 # Next code is UI
@@ -261,7 +255,7 @@ class MainWindow(QWidget):
         if (res == None):
             do_smth = "print param is invalid"
         else:
-            data.append(res)
+            self.data.append(res)
         # Here will be request to backend
         self.result = ResultWindow(one_data)
         self.result.show()
