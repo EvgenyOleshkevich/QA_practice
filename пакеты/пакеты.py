@@ -115,8 +115,8 @@ class Kernel:
             stat.write(tests[i] + "\n")
             stat.write("time: " + self.__matrix_time[i + 1].__str__() + "\n")
             stat.write("result: " + self.__matrix_is_complete[i + 1].__str__() + "\n")
-        self.__matrix_time = np.delete(self.__matrix_time, (0), axis=0)
-        self.__matrix_is_complete = np.delete(self.__matrix_is_complete, (0), axis=0)
+        self.__matrix_time = np.delete(self.__matrix_time, 0, axis=0)
+        self.__matrix_is_complete = np.delete(self.__matrix_is_complete, 0, axis=0)
         stat.write("all time: " + np.sum(self.__matrix_time, axis=0).__str__())
         stat.close()
 
@@ -308,19 +308,20 @@ class MainWindow(QWidget):
         # path_test = self.path_tests_path.text()
         path_test = "C:\\Users\\Vladimir\\Desktop\\QA_practice\\пакеты\\test\\test"
         params = 4  # self.test_params_slider.value()
-        path_reference = "C:\\Users\\Vladimir\\Desktop\\QA_practice\\пакеты\\test\\reference"  # self.path_answers_path.text()
+        path_reference = "C:\\Users\\Vladimir\\Desktop\\QA_practice\\пакеты\\test\\reference"
+        # self.path_answers_path.text()
         path_res = self.path_result_path.text()
         cmp = self.path_comp_path.text()
 
         # self.progressive_window.show()
-        res = self.kernel.start_test_by_path(path_exe, path_test, params, path_res, path_reference, cmp,
-                                             self.progressive_window.get_test_setter())
+        result = self.kernel.start_test_by_path(path_exe, path_test, params, path_res, path_reference, cmp,
+                                                self.progressive_window.get_test_setter())
         # self.progressive_window.close()
 
-        if res == None:
+        if result is None:
             self.error_window.show()
         else:
-            self.data.append(res)
+            self.data.append(result)
             self.result = ResultWindow(one_data)
             self.result.show()
 
@@ -402,7 +403,9 @@ class ResultWindow(QWidget):
 
 class PlotCanvas(FigureCanvas):
 
-    def __init__(self, width=7, height=7, dpi=80, data=None, curve_status_show=[]):
+    def __init__(self, width=7, height=7, dpi=80, data=None, curve_status_show=None):
+        if curve_status_show is None:
+            curve_status_show = []
         fig = Figure(figsize=(width, height), dpi=dpi)
         FigureCanvas.__init__(self, fig)
 
@@ -435,9 +438,9 @@ class ErrorWindow(QWidget):
 
 
 class TestConfiguration:
-    def __init__(self, name, time, status, number, count_of_cores):
+    def __init__(self, name, time_stat, status, number, count_of_cores):
         self.name = name
-        self.time = time
+        self.time = time_stat
         self.status = status
         self.number = number
         self.count_of_cores = count_of_cores
