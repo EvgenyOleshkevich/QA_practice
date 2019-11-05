@@ -160,6 +160,25 @@ class Kernel:
 
 # Next code is UI
 
+
+class ProgressWindow(QWidget):
+
+    def __init__(self):
+        super().__init__()
+        main_vertical_layout = QVBoxLayout()
+        self.progress_bar = QProgressBar()
+        self.progress_label = QLabel("Сделано столько то тестов")
+        main_vertical_layout.addWidget(self.progress_label)
+        main_vertical_layout.addWidget(self.progress_bar)
+        self.setLayout(main_vertical_layout)
+
+    def set_test_status(self, complete, number_of_test):
+        self.progress_bar.setValue(complete)
+        self.progress_label.setText(f"Complete {complete} tests of {number_of_test}")
+
+    def get_test_setter(self):
+        return self.set_test_status
+
 class MainWindow(QWidget):
     kernel = Kernel()
     data = []
@@ -227,6 +246,8 @@ class MainWindow(QWidget):
         self.setGeometry(300, 200, 1280, 720)
         self.setWindowTitle('QLineEdit')
 
+    # def on_test_progress(self):
+
     def on_slider_changed(self):
         self.test_params_value.setText(str(self.test_params_slider.value()))
 
@@ -250,9 +271,13 @@ class MainWindow(QWidget):
         path_reference = self.path_answers_path.value()
         path_res = self.path_result_path.value()
         cmp = self.path_comp_path.value()
-        res = self.kernel.start_test_by_path(path_exe, path_test, params, path_res, path_reference, cmp)
 
-        if (res == None):
+        progWind = ProgressWindow()
+        progWind.show()
+        res = self.kernel.start_test_by_path(path_exe, path_test, params, path_res, path_reference, cmp, progWind.get_test_setter())
+        progWind.close()
+
+        if res == None:
             do_smth = "print param is invalid"
         else:
             self.data.append(res)
@@ -365,7 +390,7 @@ class TestConfiguration:
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
-    ex = MainWindow()
+    ex = ProgressWindow()
     ex.show()
     sys.exit(app.exec_())
     # main()
