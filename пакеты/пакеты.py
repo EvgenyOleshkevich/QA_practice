@@ -296,10 +296,10 @@ class MainWindow(QWidget):
 
     def on_calc_click(self):
         one_data = [
-            [TestConfiguration("test one", random.random(), random.random(), i + 1, i + 1) for i in range(10)],
-            [TestConfiguration("test two", random.random(), random.random(), i + 1, i + 1) for i in range(10)],
-            [TestConfiguration("test three", random.random(), random.random(), i + 1, i + 1) for i in range(10)],
-            [TestConfiguration("test four", random.random(), random.random(), i + 1, i + 1) for i in range(10)]
+            [TestConfiguration("test one", random.random(), "Complete", i + 1, i + 1) for i in range(10)],
+            [TestConfiguration("test two", random.random(), "Complete", i + 1, i + 1) for i in range(10)],
+            [TestConfiguration("test three", random.random(), "Complete", i + 1, i + 1) for i in range(10)],
+            [TestConfiguration("test four", random.random(), "Complete", i + 1, i + 1) for i in range(10)]
         ]
         # path_exe = self.test_scenario_path.text()
         # "C:\\Users\\Vladimir\\Desktop\\QA_practice\\пакеты\\test\\test"
@@ -363,7 +363,7 @@ class ResultWindow(QWidget):
     def on_curve_show_change(self, number_of_curve, status):
         self.curve_status_show[number_of_curve] = status
         self.main_horizontal_layout.removeWidget(self.result_graph)
-        self.result_graph = PlotCanvas(width=7, height=7, curve_status_show=self.curve_status_show, data=self.result)
+        self.result_graph = PlotCanvas(width=10, height=10, curve_status_show=self.curve_status_show, data=self.result)
         self.main_horizontal_layout.addWidget(self.result_graph)
 
     def get_result_item(self, data_list, number_of_test):
