@@ -41,11 +41,18 @@ class Data:
 
 
 class Kernel:
-    __program = ""
-    __output = ""
-    __params = [0, 0]
-    __matrix_time = np.array([])
-    __matrix_is_complete = np.array([])
+
+    def __init__(self):
+        self.__program = ""
+        self.__output = ""
+        self.__params = [0, 0]
+        self.__matrix_time = np.array([])
+        self.__matrix_is_complete = np.array([])
+        self.__progress_callback = None
+        self.__complete = 0
+        self.__count_tests = 0
+        self.__cmp = None
+
 
     @staticmethod
     def __is_equal_file_default(path1, path2):
@@ -65,8 +72,6 @@ class Kernel:
 
         return func
 
-    __cmp = __is_equal_file_default
-
     def __execute_test(self, test, res_i, reference):
         time_work = -1 * np.ones(self.__params[1] + 1 - self.__params[0])
         is_complete = np.array([False] * (self.__params[1] + 1 - self.__params[0]))
@@ -78,6 +83,8 @@ class Kernel:
             subprocess.call([self.__program, param, test, res])  # without exception
             time_work[i] = time.clock() - timer
             is_complete[i] = self.__cmp(res, reference)
+            self.__complete += 1
+            self.__progress_callback(self.__complete, self.__count_tests)
         return time_work, is_complete
 
     def __execute_test(self, test):  # without output
@@ -86,6 +93,8 @@ class Kernel:
             timer = time.clock()
             subprocess.call([self.__program, (i + self.__params[0]).__str__(), test])
             time_work[i] = time.clock() - timer
+            self.__complete += 1
+            self.__progress_callback(self.__complete, self.__count_tests)
         return time_work
 
     def __start_tests(self, path_test, tests, path_reference, references):
@@ -119,24 +128,26 @@ class Kernel:
     def __validation(self, path_test, path_reference, path_cmp):
         is_valid = True
         is_valid &= os.path.isfile(self.__program)
-        is_valid &= len(self.params) == 2
+        is_valid &= len(self.__params) == 2
         if not os.path.isdir(self.__output):
             self.__output = os.getcwd() + "\\results"
-        is_valid &= os.path.exists(self.path_test)
-        is_valid &= os.path.exists(self.path_reference) | path_reference == ""
-        if os.path.isfile(self.path_cmp):
+        is_valid &= os.path.exists(path_test)
+        is_valid &= path_reference == "" or os.path.exists(path_reference)
+        if os.path.isfile(path_cmp):
             cmp = self.__is_equal_file_user(path_cmp)
         else:
             cmp = self.__is_equal_file_default
-            return is_valid
+        return is_valid
 
-    def start_test_by_path(self, path_exe, path_test, params, path_res, path_reference, path_cmp):
+    def start_test_by_path(self, path_exe, path_test, params, path_res, path_reference, path_cmp, lambda_callback):
         self.__program = path_exe
-        self.__params = params
+        self.__params = [1, params]
         self.__output = path_res
+        self.__progress_callback = lambda_callback
         if not self.__validation(path_test, path_reference, path_cmp):
             return None
-        shutil.rmtree(self.__output)
+        if os.path.isdir(self.__output):
+            shutil.rmtree(self.__output)
         os.mkdir(self.__output)
         self.__output += "\\"
 
@@ -145,16 +156,19 @@ class Kernel:
             tests = os.listdir(path_test)
             path_test += "\\"
 
+        __complete = 0
+        __count_tests = len(tests) * (self.__params[1] - self.__params[0])
+
         if path_reference == "":
             self.__start_tests(path_test, tests)
             return Data(self.__matrix_time, self.__matrix_is_complete, path_test + "statistic.txt")
 
         reference = [""]
-        if path_reference.find(".") == -1:  # check path_etalon is fold or file
+        if path_reference.find(".") == -1:  # check path_reference is fold or file
             reference = os.listdir(path_reference)
             path_reference += "\\"
 
-        self.__start_tests(path_test, tests, self.__params, path_reference, reference, self.__cmp)
+        self.__start_tests(path_test, tests, path_reference, reference)
         return Data(self.__matrix_time, self.__matrix_is_complete, path_test + "statistic.txt")
 
 
@@ -268,9 +282,9 @@ class MainWindow(QWidget):
         path_exe = self.test_scenario_path.text()
         path_test = self.path_tests_path.text()
         params = self.test_params_slider.value()
-        path_reference = self.path_answers_path.value()
-        path_res = self.path_result_path.value()
-        cmp = self.path_comp_path.value()
+        path_reference = self.path_answers_path.text()
+        path_res = self.path_result_path.text()
+        cmp = self.path_comp_path.text()
 
         progWind = ProgressWindow()
         progWind.show()
@@ -390,7 +404,7 @@ class TestConfiguration:
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
-    ex = ProgressWindow()
+    ex = MainWindow()
     ex.show()
     sys.exit(app.exec_())
     # main()
