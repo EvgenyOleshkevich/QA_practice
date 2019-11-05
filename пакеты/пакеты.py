@@ -213,15 +213,15 @@ class MainWindow(QWidget):
 
         main_vertical_layout = QVBoxLayout()
 
-        test_scenario_label = QLabel("Test scenario path")
+        test_scenario_label = QLabel("Path to executable scenario file")
         self.test_scenario_path = QLineEdit()
 
-        path_tests_label = QLabel("Path to file(folder) with test(tests)")
+        path_tests_label = QLabel("Path to file(folder) with the test(tests)")
         self.path_tests_path = QLineEdit()
 
         test_params_layout = QHBoxLayout()
         test_params_layout.addStretch(0)
-        self.test_params_label = QLabel("Current Param value")
+        self.test_params_label = QLabel("Current Param value (min = 0, max = 100)")
         self.test_params_value = QLineEdit()
         self.test_params_value.textChanged.connect(self.on_value_changed)
         test_params_layout.addWidget(self.test_params_label)
@@ -238,16 +238,16 @@ class MainWindow(QWidget):
         self.test_params_slider.setValue(50)
         self.test_params_slider.valueChanged[int].connect(self.on_slider_changed)
 
-        path_answers_label = QLabel("Path to default test answers")
+        path_answers_label = QLabel("Path to folder with default test results")
         self.path_answers_path = QLineEdit()
 
-        path_result_label = QLabel("Path to save answers folder")
+        path_result_label = QLabel("Path to folder to save the results")
         self.path_result_path = QLineEdit()
 
-        path_comp_label = QLabel("Path to answers comparator file")
+        path_comp_label = QLabel("Path to answers comparator executable file")
         self.path_comp_path = QLineEdit()
 
-        calc_button = QPushButton("Calc")
+        calc_button = QPushButton("Start Testing")
         calc_button.clicked.connect(self.on_calc_click)
 
         main_vertical_layout.addStretch(1)
