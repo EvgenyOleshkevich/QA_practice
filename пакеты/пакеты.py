@@ -454,9 +454,9 @@ def get_configuration_list(data_list):
         test_data = [TestConfiguration(
             test_index + 1,  # test_name should be here
             configuration_time_list[configuration_index],
-            "Complete" if (configuration_status_list[configuration_index] == 1.0) else "Failed",
+            "Complete" if (configuration_status_list[configuration_index]) else "Failed",
             test_index + 1,
-            test_index + 1)  # Param value shoulde be here
+            data_list.get_params()[0] + configuration_index)
             for configuration_index in range(len(configuration_time_list))]
         conf_list.append(test_data)
     return conf_list
