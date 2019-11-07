@@ -14,17 +14,17 @@ from matplotlib.figure import Figure
 
 
 class Data:
-    matrix_time = None
-    matrix_is_complete = None
-    path_statistic = None
-
     def get_time(self, mask): return np.sum(self.matrix_time[mask], axis=0)
 
     def get_tests_count(self): return len(self.matrix_time)
 
+    def get_params(self): return self.params
+
     def get_time_tests(self, index): return self.matrix_time[index]
 
     def get_results_tests(self, index): return self.matrix_is_complete[index]
+
+    def get_test_name(self, mask): return self.test_name[mask]
 
     def clear_data(self):
         self.matrix_time.clear()
@@ -35,11 +35,13 @@ class Data:
         b, g = file.readline()
         # finish writing
 
-    def __init__(self, matrix_time, matrix_is_complete, path_statistic):
+    def __init__(self, matrix_time, matrix_is_complete, path_statistic, test_name, params):
         super().__init__()
         self.matrix_time = matrix_time
         self.matrix_is_complete = matrix_is_complete
         self.path_statistic = path_statistic
+        self.test_name = test_name
+        self.params = params
 
 
 class Kernel:
@@ -77,7 +79,7 @@ class Kernel:
 
     def __execute_test(self, test, res_i, reference):
         time_work = -1 * np.ones(int(self.params[1] + 1 - self.params[0]))
-        is_complete = np.array([False for i in range(int(self.params[1] + 1 - self.params[0]))])
+        is_complete = np.array([False for i in range(self.params[1] + 1 - self.params[0])])
         for i in range(int(self.params[1] + 1 - self.params[0])):
             param = (i + self.params[0]).__str__()
             res = res_i + "\\" + param + ".txt"
@@ -102,10 +104,10 @@ class Kernel:
 
     def __start_tests(self, path_test, tests, path_reference, references):
         self.__matrix_time = np.array([np.zeros(self.params[1] + 1 - self.params[0])])
-        self.__matrix_is_complete = np.array([np.zeros(self.params[1] + 1 - self.params[0])])
+        self.__matrix_is_complete = np.array([[False for i in range(self.params[1] + 1 - self.params[0])]])
         stat = open(self.__output + "statistic.txt", 'w')
         stat.write(self.params.__str__() + "\n")
-        for i in range(0, len(tests)):
+        for i in range(len(tests)):
             test = path_test + tests[i]
             reference = path_reference + references[i]
             res = self.__output + i.__str__()
@@ -125,7 +127,7 @@ class Kernel:
     def __start_tests_wo_ref(self, path_test, tests):
         self.__matrix_time = np.array(len(tests))
         stat = open(self.__output + "statistic.txt", 'w')
-        for i in range(0, len(tests)):
+        for i in range(len(tests)):
             test = path_test + tests[i]
             self.__matrix_time[i] = self.__execute_test_wo_ref(test)
             stat.write(tests[i] + "\n")
@@ -157,9 +159,9 @@ class Kernel:
         os.mkdir(self.__output)
         self.__output += "\\"
 
-        tests = [""]
+        tests = np.array([""])
         if path_test.find(".") == -1:  # check path_test is fold or file
-            tests = os.listdir(path_test)
+            tests = np.array(os.listdir(path_test))
             path_test += "\\"
 
         self.__complete = 0
@@ -167,15 +169,15 @@ class Kernel:
 
         if path_reference == "":
             self.__start_tests_wo_ref(path_test, tests)
-            return Data(self.__matrix_time, self.__matrix_is_complete, path_test + "statistic.txt")
+            return Data(self.__matrix_time, self.__matrix_is_complete, path_test + "statistic.txt", tests, self.params)
 
-        reference = [""]
+        reference = np.array([""])
         if path_reference.find(".") == -1:  # check path_reference is    fold or file
-            reference = os.listdir(path_reference)
+            reference = np.array(os.listdir(path_reference))
             path_reference += "\\"
 
         self.__start_tests(path_test, tests, path_reference, reference)
-        return Data(self.__matrix_time, self.__matrix_is_complete, path_test + "statistic.txt")
+        return Data(self.__matrix_time, self.__matrix_is_complete, path_test + "statistic.txt", tests, self.params)
 
 
 # Next code is UI
