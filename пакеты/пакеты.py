@@ -1,6 +1,5 @@
 import difflib
 import os
-import random
 import shutil
 import subprocess
 import sys
@@ -60,7 +59,10 @@ class Kernel:
     @staticmethod
     def __is_equal_file_user(path):
         def func(path1, path2):
-            return subprocess.check_output([path, path1, path2])
+            y = subprocess.check_output([path, path1, path2]).__str__() == 'b\'True\''
+            #y = subprocess.call([path, path1, path2])
+            #y = subprocess.Popen([path, path1, path2])
+            return y
 
         return func
 
@@ -74,8 +76,6 @@ class Kernel:
         self.__complete = 0
         self.__count_tests = 0
         self.__cmp = self.__is_equal_file_default
-
-    # array = [True for i in range(n)]
 
     def __execute_test(self, test, res_i, reference):
         time_work = -1 * np.ones(int(self.params[1] + 1 - self.params[0]))
@@ -246,7 +246,6 @@ class MainWindow(QWidget):
         self.test_params_value_min.textChanged.connect(self.on_value_changed_min)
         self.test_params_value_max = QLineEdit("100")
         self.test_params_value_max.textChanged.connect(self.on_value_changed_max)
-        # self.test_params_value.textChanged.connect(self.on_value_changed)
         test_params_layout.addWidget(self.test_params_label)
         test_params_layout.addWidget(self.test_params_value_min)
         test_params_layout.addStretch(0)
@@ -322,18 +321,17 @@ class MainWindow(QWidget):
         path_exe = "C:\\Users\\Vladimir\\Desktop\\QA_practice\\пакеты\\test\\main.exe"
         # path_test = self.path_tests_path.text()
         path_test = "C:\\Users\\Vladimir\\Desktop\\QA_practice\\пакеты\\test\\test"
-        params =  [int(self.test_params_value_min.text()), int(self.test_params_value_max.text())]
+        params =  [2, 4]
+        #[int(self.test_params_value_min.text()), int(self.test_params_value_max.text())]
 
         path_reference = "C:\\Users\\Vladimir\\Desktop\\QA_practice\\пакеты\\test\\reference"
         # self.path_answers_path.text()
         path_res = self.path_result_path.text()
-        cmp = self.path_comp_path.text()
+        cmp = "C:\\Users\\Vladimir\\Desktop\\QA_practice\\пакеты\\test\\comp.exe"# self.path_comp_path.text()
 
-        # self.progressive_window.show()
         result, message = self.kernel.start_test_by_path(path_exe, path_test, params, path_res, path_reference, cmp,
                                                          self.progressive_window.get_test_setter())
-        # self.progressive_window.close()
-        # (None, error)
+
         if result is None:
             self.error_window.set_title("Error!")
             self.error_window.set_error(message)
@@ -341,7 +339,6 @@ class MainWindow(QWidget):
         else:
             self.mask = [True for i in range(result.get_tests_count())]
             test_info = get_configuration_list(result, self.mask)
-            # self.data.append(result)
             self.result = ResultWindow(test_info)
             self.result.show()
 
