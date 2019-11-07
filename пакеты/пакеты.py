@@ -14,30 +14,32 @@ from matplotlib.figure import Figure
 
 
 class Data:
-    __matrix_time = None
-    __matrix_is_complete = None
-    __path_statistic = None
+    matrix_time = None
+    matrix_is_complete = None
+    path_statistic = None
 
-    def get_time(self, mask): return np.sum(self.__matrix_time[mask], axis=0)
+    def get_time(self, mask): return np.sum(self.matrix_time[mask], axis=0)
 
-    def get_time_tests(self, index): return self.__matrix_time[index]
+    def get_tests_count(self): return len(self.matrix_time)
 
-    def get_results_tests(self, index): return self.__matrix_is_complete[index]
+    def get_time_tests(self, index): return self.matrix_time[index]
+
+    def get_results_tests(self, index): return self.matrix_is_complete[index]
 
     def clear_data(self):
-        self.__matrix_time.clear()
-        self.__matrix_is_complete.clear()
+        self.matrix_time.clear()
+        self.matrix_is_complete.clear()
 
     def download_data(self):
-        file = open(self.__path_statistic, 'r')
+        file = open(self.path_statistic, 'r')
         b, g = file.readline()
         # finish writing
 
     def __init__(self, matrix_time, matrix_is_complete, path_statistic):
         super().__init__()
-        __matrix_time = matrix_time
-        __matrix_is_complete = matrix_is_complete
-        __path_statistic = path_statistic
+        self.matrix_time = matrix_time
+        self.matrix_is_complete = matrix_is_complete
+        self.path_statistic = path_statistic
 
 
 class Kernel:
@@ -111,15 +113,14 @@ class Kernel:
             a, b = self.__execute_test(test, res, reference)
             self.__matrix_time = np.append(self.__matrix_time, [a], axis=0)
             self.__matrix_is_complete = np.append(self.__matrix_is_complete, [b], axis=0)
-            #self.__matrix_is_complete[i] = b
+            # self.__matrix_is_complete[i] = b
             stat.write(tests[i] + "\n")
             stat.write("time: " + self.__matrix_time[i + 1].__str__() + "\n")
             stat.write("result: " + self.__matrix_is_complete[i + 1].__str__() + "\n")
-        self.__matrix_time = np.delete(self.__matrix_time, (0), axis=0)
-        self.__matrix_is_complete = np.delete(self.__matrix_is_complete, (0), axis=0)
+        self.__matrix_time = np.delete(self.__matrix_time, 0, axis=0)
+        self.__matrix_is_complete = np.delete(self.__matrix_is_complete, 0, axis=0)
         stat.write("all time: " + np.sum(self.__matrix_time, axis=0).__str__())
         stat.close()
-
 
     def __start_tests_wo_ref(self, path_test, tests):
         self.__matrix_time = np.array(len(tests))
@@ -185,19 +186,17 @@ class ProgressWindow(QWidget):
     def __init__(self):
         super().__init__()
         self.main_vertical_layout = QVBoxLayout()
-        self.progress_bar = QProgressBar()
+        self.progress_bar = QProgressBar(self)
         self.progress_label = QLabel("Сделано столько то тестов")
         self.main_vertical_layout.addWidget(self.progress_label)
         self.main_vertical_layout.addWidget(self.progress_bar)
         self.setLayout(self.main_vertical_layout)
+        self.setWindowTitle("Progress:")
+        self.setGeometry(400, 400, 300, 70)
 
     def set_test_status(self, complete, number_of_test):
-        self.main_vertical_layout.removeWidget(self.progress_bar)
-        self.main_vertical_layout.removeWidget(self.progress_label)
-        self.progress_bar.setValue(complete)
+        self.progress_bar.setValue(complete * 100 / number_of_test)
         self.progress_label.setText(f"Complete {complete} tests of {number_of_test}")
-        self.main_vertical_layout.addWidget(self.progress_label)
-        self.main_vertical_layout.addWidget(self.progress_bar)
 
     def get_test_setter(self):
         return self.set_test_status
@@ -209,24 +208,27 @@ class MainWindow(QWidget):
 
     def __init__(self):
         super().__init__()
+        self.error_window = ErrorWindow()
+        self.progressive_window = ProgressWindow()
         self.result = None
         main_horizontal_layout = QHBoxLayout()
 
         main_vertical_layout = QVBoxLayout()
 
-        test_scenario_label = QLabel("Test scenario path")
+        test_scenario_label = QLabel("Path to executable scenario file")
         self.test_scenario_path = QLineEdit()
 
-        path_tests_label = QLabel("Path to file(folder) with test(tests)")
+        path_tests_label = QLabel("Path to file(folder) with the test(tests)")
         self.path_tests_path = QLineEdit()
 
         test_params_layout = QHBoxLayout()
-        test_params_layout.addStretch(2)
-        self.test_params_label = QLabel("Current Param value")
+        test_params_layout.addStretch(0)
+        self.test_params_label = QLabel("Current Param value (min = 0, max = 100)")
         self.test_params_value = QLineEdit()
         self.test_params_value.textChanged.connect(self.on_value_changed)
         test_params_layout.addWidget(self.test_params_label)
         test_params_layout.addWidget(self.test_params_value)
+        test_params_layout.addStretch(20)
 
         self.test_params_slider = QSlider(Qt.Horizontal, self)
         self.test_params_slider.setFocusPolicy(Qt.StrongFocus)
@@ -238,30 +240,43 @@ class MainWindow(QWidget):
         self.test_params_slider.setValue(50)
         self.test_params_slider.valueChanged[int].connect(self.on_slider_changed)
 
-        path_answers_label = QLabel("Path to default test answers")
+        path_answers_label = QLabel("Path to folder with default test results")
         self.path_answers_path = QLineEdit()
 
-        path_result_label = QLabel("Path to save answers folder")
+        path_result_label = QLabel("Path to folder to save the results")
         self.path_result_path = QLineEdit()
 
-        path_comp_label = QLabel("Path to answers comparator file")
+        path_comp_label = QLabel("Path to answers comparator executable file")
         self.path_comp_path = QLineEdit()
 
-        calc_button = QPushButton("Calc")
+        calc_button = QPushButton("Start Testing")
         calc_button.clicked.connect(self.on_calc_click)
 
+        main_vertical_layout.addStretch(1)
         main_vertical_layout.addWidget(test_scenario_label)
+        main_vertical_layout.addStretch(0)
         main_vertical_layout.addWidget(self.test_scenario_path)
+        main_vertical_layout.addStretch(1)
         main_vertical_layout.addWidget(path_tests_label)
+        main_vertical_layout.addStretch(0)
         main_vertical_layout.addWidget(self.path_tests_path)
+        main_vertical_layout.addStretch(1)
         main_vertical_layout.addLayout(test_params_layout)
+        main_vertical_layout.addStretch(0)
         main_vertical_layout.addWidget(self.test_params_slider)
+        main_vertical_layout.addStretch(1)
         main_vertical_layout.addWidget(path_answers_label)
+        main_vertical_layout.addStretch(0)
         main_vertical_layout.addWidget(self.path_answers_path)
+        main_vertical_layout.addStretch(1)
         main_vertical_layout.addWidget(path_result_label)
+        main_vertical_layout.addStretch(0)
         main_vertical_layout.addWidget(self.path_result_path)
+        main_vertical_layout.addStretch(1)
         main_vertical_layout.addWidget(path_comp_label)
+        main_vertical_layout.addStretch(0)
         main_vertical_layout.addWidget(self.path_comp_path)
+        main_vertical_layout.addStretch(1)
         main_vertical_layout.addWidget(calc_button)
 
         main_horizontal_layout.addLayout(main_vertical_layout)
@@ -283,34 +298,29 @@ class MainWindow(QWidget):
         self.test_params_slider.setValue(temp_value)
 
     def on_calc_click(self):
-        one_data = [
-            [TestConfiguration("test one", random.random(), random.random(), i + 1, i + 1) for i in range(10)],
-            [TestConfiguration("test two", random.random(), random.random(), i + 1, i + 1) for i in range(10)],
-            [TestConfiguration("test three", random.random(), random.random(), i + 1, i + 1) for i in range(10)],
-            [TestConfiguration("test four", random.random(), random.random(), i + 1, i + 1) for i in range(10)]
-        ]
         # path_exe = self.test_scenario_path.text()
+        # "C:\\Users\\Vladimir\\Desktop\\QA_practice\\пакеты\\test\\test"
         path_exe = "C:\\Users\\Vladimir\\Desktop\\QA_practice\\пакеты\\test\\main.exe"
         # path_test = self.path_tests_path.text()
         path_test = "C:\\Users\\Vladimir\\Desktop\\QA_practice\\пакеты\\test\\test"
         params = 4  # self.test_params_slider.value()
-        path_reference = "C:\\Users\\Vladimir\\Desktop\\QA_practice\\пакеты\\test\\reference"  # self.path_answers_path.text()
+        path_reference = "C:\\Users\\Vladimir\\Desktop\\QA_practice\\пакеты\\test\\reference"
+        # self.path_answers_path.text()
         path_res = self.path_result_path.text()
         cmp = self.path_comp_path.text()
 
-        progWind = ProgressWindow()
-        progWind.show()
-        res = self.kernel.start_test_by_path(path_exe, path_test, params, path_res, path_reference, cmp,
-                                             progWind.get_test_setter())
-        progWind.close()
+        # self.progressive_window.show()
+        result = self.kernel.start_test_by_path(path_exe, path_test, params, path_res, path_reference, cmp,
+                                                self.progressive_window.get_test_setter())
+        # self.progressive_window.close()
 
-        if res == None:
-            do_smth = "print param is invalid"
+        if result is None:
+            self.error_window.show()
         else:
-            self.data.append(res)
-        # Here will be request to backend
-        self.result = ResultWindow(one_data)
-        self.result.show()
+            test_info = get_configuration_list(result)
+            # self.data.append(result)
+            self.result = ResultWindow(test_info)
+            self.result.show()
 
 
 class ResultWindow(QWidget):
@@ -326,8 +336,9 @@ class ResultWindow(QWidget):
         self.result_list = QVBoxLayout()
         for i in range(len(result_data)):
             self.result_list.addLayout(
-                self.get_result_item(result_data[i], self.on_curve_show_change, i)
+                self.get_result_item(result_data[i], i)
             )
+            self.result_list.addSpacing(35)
 
         self.result = result_data
 
@@ -339,36 +350,41 @@ class ResultWindow(QWidget):
 
         self.curve_status_show = [True for i in range(len(result_data))]
 
-        self.result_graph = PlotCanvas(width=7, height=7, curve_status_show=self.curve_status_show, data=result_data)
+        self.result_graph = PlotCanvas(width=8, height=8, curve_status_show=self.curve_status_show, data=result_data)
         self.main_horizontal_layout = QHBoxLayout()
         self.main_horizontal_layout.setAlignment(Qt.AlignRight)
         self.main_horizontal_layout.addWidget(self.scroll)
         self.main_horizontal_layout.addWidget(self.result_graph)
+        self.main_horizontal_layout.setAlignment(Qt.AlignLeft)
 
         self.setLayout(self.main_horizontal_layout)
 
     def on_curve_show_change(self, number_of_curve, status):
         self.curve_status_show[number_of_curve] = status
         self.main_horizontal_layout.removeWidget(self.result_graph)
-        self.result_graph = PlotCanvas(width=7, height=7, curve_status_show=self.curve_status_show, data=self.result)
+        self.result_graph.resize(0, 0)
+        self.result_graph = PlotCanvas(width=8, height=8, curve_status_show=self.curve_status_show, data=self.result)
         self.main_horizontal_layout.addWidget(self.result_graph)
 
-    def get_result_item(self, data_list, call_back_checkbox, number_of_test):
+    def get_result_item(self, data_list, number_of_test):
         item_layout = QHBoxLayout()
         item_check_box = QCheckBox()
+        left_vertical_layout = QVBoxLayout()
         item_check_box.setChecked(True)
         item_check_box.stateChanged.connect(
-            # lambda arg1=number_of_test, arg2=item_check_box.isChecked: call_back_checkbox(arg1, arg2()))
             self.template(number_of_test, item_check_box.isChecked))
-        item_layout.addWidget(item_check_box)
+        left_vertical_layout.addWidget(item_check_box)
+        left_vertical_layout.addStretch(1)
+        item_layout.addLayout(left_vertical_layout)
+        item_layout.addStretch(0)
         sub_items_layout = QVBoxLayout()
         for data in data_list:
             sub_record_layout = QHBoxLayout()
-            item_name = QLabel(str(data.name))
-            item_time = QLabel(str(data.time))
-            item_status = QLabel(str(data.status))
-            item_number = QLabel(str(data.number))
-            item_number_cores = QLabel(str(data.count_of_cores))
+            item_name = QLabel(f"Test name: {data.name}", )
+            item_time = QLabel(f"Execution time: {round(data.time, 6)} seconds,")
+            item_status = QLabel(f"Test status: {data.status},")
+            item_number = QLabel(str(data.number) + ",")
+            item_number_cores = QLabel(f"Param value: {data.param_value}")
 
             sub_record_layout.addWidget(item_name)
             sub_record_layout.addWidget(item_time)
@@ -377,14 +393,17 @@ class ResultWindow(QWidget):
             sub_record_layout.addWidget(item_number_cores)
 
             sub_items_layout.addLayout(sub_record_layout)
+        # sub_items_layout.addStretch(0.1) maybe do something with space between items
         item_layout.addLayout(sub_items_layout)
-
+        item_layout.addStretch(0)
         return item_layout
 
 
 class PlotCanvas(FigureCanvas):
 
-    def __init__(self, width=7, height=7, dpi=80, data=None, curve_status_show=[]):
+    def __init__(self, width=7, height=7, dpi=80, data=None, curve_status_show=None):
+        if curve_status_show is None:
+            curve_status_show = []
         fig = Figure(figsize=(width, height), dpi=dpi)
         FigureCanvas.__init__(self, fig)
 
@@ -395,24 +414,50 @@ class PlotCanvas(FigureCanvas):
         ax = self.figure.add_subplot(111)
         for test in range(len(data_list)):
             if curve_status_show[test]:
-                # Question with indexes
-                x = np.array([current_test.count_of_cores for current_test in data_list[test]])
+                x = np.array([current_test.param_value for current_test in data_list[test]])
                 y = np.array([current_test.time for current_test in data_list[test]])
-                ax.plot(x, y)
+                ax.plot(x, y, label=f"Test №{test + 1}")
 
+        ax.legend()
         ax.set_ylabel("Execution time")
-        ax.set_xlabel("Count of Cores")
+        ax.set_xlabel("Param value")
         ax.grid()
-        ax.set_title(str(curve_status_show[0]))
+        ax.set_title("Tasks Graph")
+
+
+class ErrorWindow(QWidget):
+    def __init__(self):
+        super().__init__()
+        layout = QVBoxLayout()
+        layout.addWidget(QLabel("Input data is not valid!"))
+        self.setLayout(layout)
+        self.setGeometry(600, 500, 200, 50)
+        self.setWindowTitle("Error!")
 
 
 class TestConfiguration:
-    def __init__(self, name, time, status, number, count_of_cores):
+    def __init__(self, name, time_stat, status, number, count_of_cores):
         self.name = name
-        self.time = time
+        self.time = time_stat
         self.status = status
         self.number = number
-        self.count_of_cores = count_of_cores
+        self.param_value = count_of_cores
+
+
+def get_configuration_list(data_list):
+    conf_list = []
+    for test_index in range(data_list.get_tests_count()):
+        configuration_time_list = data_list.get_time_tests(test_index)
+        configuration_status_list = data_list.get_results_tests(test_index)
+        test_data = [TestConfiguration(
+            test_index + 1,  # test_name should be here
+            configuration_time_list[configuration_index],
+            "Complete" if (configuration_status_list[configuration_index] == 1.0) else "Failed",
+            test_index + 1,
+            test_index + 1)  # Param value shoulde be here
+            for configuration_index in range(len(configuration_time_list))]
+        conf_list.append(test_data)
+    return conf_list
 
 
 if __name__ == "__main__":
@@ -420,31 +465,3 @@ if __name__ == "__main__":
     ex = MainWindow()
     ex.show()
     sys.exit(app.exec_())
-    # main()
-
-    # result_path =  path
-# os.system(program)
-# path = os.getcwd() + "\\folder"
-# stat = open(path + "\\statistica.txt", 'w')
-# data = {
-#    "param": {
-#    "from": params[0],
-#    "to": params[1]
-#    }
-# }
-# json.dump(data, stat)
-
-# f1 = np.array([1, 2, 3, 4, 5]).__str__()
-# f2 = np.array([True, False, True, True, False]).__str__()
-# dic = {}
-# dic["test1"] = [f1, f2]
-# json.dump(dic, stat)
-# stat.close()
-# path = os.getcwd() + "\\folder"
-# shutil.rmtree(path)
-# os.mkdir(path + "aaa")
-# t = os.listdir(os.getcwd())
-# i = 7
-# args = {'index': i}
-# u = 'path %(index)s'
-# print(u % args)
