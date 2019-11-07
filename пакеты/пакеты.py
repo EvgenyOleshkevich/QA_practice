@@ -20,6 +20,8 @@ class Data:
 
     def get_time(self, mask): return np.sum(self.matrix_time[mask], axis=0)
 
+    def get_tests_count(self): return len(self.matrix_time)
+
     def get_time_tests(self, index): return self.matrix_time[index]
 
     def get_results_tests(self, index): return self.matrix_is_complete[index]
@@ -296,12 +298,6 @@ class MainWindow(QWidget):
         self.test_params_slider.setValue(temp_value)
 
     def on_calc_click(self):
-        one_data = [
-            [TestConfiguration("test one", random.random(), "Complete", i + 1, i + i * i) for i in range(10)],
-            [TestConfiguration("test two", random.random(), "Complete", i + 1, i + i * i) for i in range(10)],
-            [TestConfiguration("test three", random.random(), "Complete", i + 1, i + i * i) for i in range(10)],
-            [TestConfiguration("test four", random.random(), "Complete", i + 1, i + i * i) for i in range(10)]
-        ]
         # path_exe = self.test_scenario_path.text()
         # "C:\\Users\\Vladimir\\Desktop\\QA_practice\\пакеты\\test\\test"
         path_exe = "C:\\Users\\Vladimir\\Desktop\\QA_practice\\пакеты\\test\\main.exe"
@@ -321,8 +317,9 @@ class MainWindow(QWidget):
         if result is None:
             self.error_window.show()
         else:
-            self.data.append(result)
-            self.result = ResultWindow(one_data)
+            test_info = get_configuration_list(result)
+            # self.data.append(result)
+            self.result = ResultWindow(test_info)
             self.result.show()
 
 
@@ -353,7 +350,7 @@ class ResultWindow(QWidget):
 
         self.curve_status_show = [True for i in range(len(result_data))]
 
-        self.result_graph = PlotCanvas(width=10, height=10, curve_status_show=self.curve_status_show, data=result_data)
+        self.result_graph = PlotCanvas(width=8, height=8, curve_status_show=self.curve_status_show, data=result_data)
         self.main_horizontal_layout = QHBoxLayout()
         self.main_horizontal_layout.setAlignment(Qt.AlignRight)
         self.main_horizontal_layout.addWidget(self.scroll)
@@ -366,7 +363,7 @@ class ResultWindow(QWidget):
         self.curve_status_show[number_of_curve] = status
         self.main_horizontal_layout.removeWidget(self.result_graph)
         self.result_graph.resize(0, 0)
-        self.result_graph = PlotCanvas(width=10, height=10, curve_status_show=self.curve_status_show, data=self.result)
+        self.result_graph = PlotCanvas(width=8, height=8, curve_status_show=self.curve_status_show, data=self.result)
         self.main_horizontal_layout.addWidget(self.result_graph)
 
     def get_result_item(self, data_list, number_of_test):
@@ -383,11 +380,11 @@ class ResultWindow(QWidget):
         sub_items_layout = QVBoxLayout()
         for data in data_list:
             sub_record_layout = QHBoxLayout()
-            item_name = QLabel(str(data.name))
-            item_time = QLabel(f"Execution time: {round(data.time, 6)}")
-            item_status = QLabel(str(data.status))
-            item_number = QLabel(str(data.number))
-            item_number_cores = QLabel(f"Count of cores: {data.count_of_cores}")
+            item_name = QLabel(f"Test name: {data.name}", )
+            item_time = QLabel(f"Execution time: {round(data.time, 6)} seconds,")
+            item_status = QLabel(f"Test status: {data.status},")
+            item_number = QLabel(str(data.number) + ",")
+            item_number_cores = QLabel(f"Param value: {data.param_value}")
 
             sub_record_layout.addWidget(item_name)
             sub_record_layout.addWidget(item_time)
@@ -396,6 +393,7 @@ class ResultWindow(QWidget):
             sub_record_layout.addWidget(item_number_cores)
 
             sub_items_layout.addLayout(sub_record_layout)
+        # sub_items_layout.addStretch(0.1) maybe do something with space between items
         item_layout.addLayout(sub_items_layout)
         item_layout.addStretch(0)
         return item_layout
@@ -416,13 +414,13 @@ class PlotCanvas(FigureCanvas):
         ax = self.figure.add_subplot(111)
         for test in range(len(data_list)):
             if curve_status_show[test]:
-                x = np.array([current_test.count_of_cores for current_test in data_list[test]])
+                x = np.array([current_test.param_value for current_test in data_list[test]])
                 y = np.array([current_test.time for current_test in data_list[test]])
                 ax.plot(x, y, label=f"Test №{test + 1}")
 
         ax.legend()
         ax.set_ylabel("Execution time")
-        ax.set_xlabel("Count of Cores")
+        ax.set_xlabel("Param value")
         ax.grid()
         ax.set_title("Tasks Graph")
 
@@ -443,7 +441,23 @@ class TestConfiguration:
         self.time = time_stat
         self.status = status
         self.number = number
-        self.count_of_cores = count_of_cores
+        self.param_value = count_of_cores
+
+
+def get_configuration_list(data_list):
+    conf_list = []
+    for test_index in range(data_list.get_tests_count()):
+        configuration_time_list = data_list.get_time_tests(test_index)
+        configuration_status_list = data_list.get_results_tests(test_index)
+        test_data = [TestConfiguration(
+            test_index + 1,  # test_name should be here
+            configuration_time_list[configuration_index],
+            "Complete" if (configuration_status_list[configuration_index] == 1.0) else "Failed",
+            test_index + 1,
+            test_index + 1)  # Param value shoulde be here
+            for configuration_index in range(len(configuration_time_list))]
+        conf_list.append(test_data)
+    return conf_list
 
 
 if __name__ == "__main__":
@@ -451,31 +465,3 @@ if __name__ == "__main__":
     ex = MainWindow()
     ex.show()
     sys.exit(app.exec_())
-    # main()
-
-    # result_path =  path
-# os.system(program)
-# path = os.getcwd() + "\\folder"
-# stat = open(path + "\\statistica.txt", 'w')
-# data = {
-#    "param": {
-#    "from": params[0],
-#    "to": params[1]
-#    }
-# }
-# json.dump(data, stat)
-
-# f1 = np.array([1, 2, 3, 4, 5]).__str__()
-# f2 = np.array([True, False, True, True, False]).__str__()
-# dic = {}
-# dic["test1"] = [f1, f2]
-# json.dump(dic, stat)
-# stat.close()
-# path = os.getcwd() + "\\folder"
-# shutil.rmtree(path)
-# os.mkdir(path + "aaa")
-# t = os.listdir(os.getcwd())
-# i = 7
-# args = {'index': i}
-# u = 'path %(index)s'
-# print(u % args)
