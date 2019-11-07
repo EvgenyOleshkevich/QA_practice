@@ -14,15 +14,15 @@ from matplotlib.figure import Figure
 
 
 class Data:
-    def get_time(self, mask): return np.sum(self.matrix_time[mask], axis=0)
+    def get_time(self, mask): return self.matrix_time[mask]
+
+    def get_time_sum(self, mask): return np.sum(self.matrix_time[mask], axis=0)
 
     def get_tests_count(self): return len(self.matrix_time)
 
     def get_params(self): return self.params
 
-    def get_time_tests(self, index): return self.matrix_time[index]
-
-    def get_results_tests(self, index): return self.matrix_is_complete[index]
+    def get_results_tests(self, mask): return self.matrix_is_complete[mask]
 
     def get_test_name(self, mask): return self.test_name[mask]
 
@@ -137,23 +137,36 @@ class Kernel:
 
     def __validation(self, path_test, path_reference, path_cmp):
         is_valid = True
-        is_valid &= os.path.isfile(self.__program)
-        is_valid &= len(self.params) == 2
+        message = ""
+
+        t = os.path.isfile(self.__program)
+        if not t: message += "path program\n"
+        is_valid &= t
+
         if not os.path.isdir(self.__output):
             self.__output = os.getcwd() + "\\results"
-        is_valid &= os.path.exists(path_test)
-        is_valid &= path_reference == "" or os.path.exists(path_reference)
+            message += "path result\n"
+
+        t = os.path.exists(path_test)
+        if not t: message += "path test\n"
+        is_valid &= t
+
+        t = path_reference == "" or os.path.exists(path_reference)
+        if not t: message += "path reference\n"
+        is_valid &= t
         if os.path.isfile(path_cmp):
             self.__cmp = self.__is_equal_file_user(path_cmp)
-        return is_valid
+            message += "path comparator\n"
+        return is_valid, message
 
     def start_test_by_path(self, path_exe, path_test, params, path_res, path_reference, path_cmp, lambda_callback):
         self.__program = path_exe
-        self.params[1] = int(params)
+        self.params = [min(params), max(params)]
         self.__output = path_res
         self.__progress_callback = lambda_callback
-        if not self.__validation(path_test, path_reference, path_cmp):
-            return None
+        is_valid, message = self.__validation(path_test, path_reference, path_cmp)
+        if not is_valid:
+            return None, message
         if os.path.isdir(self.__output):
             shutil.rmtree(self.__output)
         os.mkdir(self.__output)
@@ -169,7 +182,8 @@ class Kernel:
 
         if path_reference == "":
             self.__start_tests_wo_ref(path_test, tests)
-            return Data(self.__matrix_time, self.__matrix_is_complete, path_test + "statistic.txt", tests, self.params)
+            return Data(self.__matrix_time, self.__matrix_is_complete, path_test + "statistic.txt", tests,
+                        self.params), message
 
         reference = np.array([""])
         if path_reference.find(".") == -1:  # check path_reference is    fold or file
@@ -177,7 +191,8 @@ class Kernel:
             path_reference += "\\"
 
         self.__start_tests(path_test, tests, path_reference, reference)
-        return Data(self.__matrix_time, self.__matrix_is_complete, path_test + "statistic.txt", tests, self.params)
+        return Data(self.__matrix_time, self.__matrix_is_complete, path_test + "statistic.txt", tests,
+                    self.params), message
 
 
 # Next code is UI
@@ -205,12 +220,13 @@ class ProgressWindow(QWidget):
 
 
 class MainWindow(QWidget):
-    kernel = Kernel()
-    data = []
 
     def __init__(self):
         super().__init__()
         self.error_window = ErrorWindow()
+        self.kernel = Kernel()
+        self.data = []
+        self.mask = []
         self.progressive_window = ProgressWindow()
         self.result = None
         main_horizontal_layout = QHBoxLayout()
@@ -225,22 +241,17 @@ class MainWindow(QWidget):
 
         test_params_layout = QHBoxLayout()
         test_params_layout.addStretch(0)
-        self.test_params_label = QLabel("Current Param value (min = 0, max = 100)")
-        self.test_params_value = QLineEdit()
-        self.test_params_value.textChanged.connect(self.on_value_changed)
+        self.test_params_label = QLabel("Current Param Range (min = 1, max = 100)")
+        self.test_params_value_min = QLineEdit("1")
+        self.test_params_value_min.textChanged.connect(self.on_value_changed_min)
+        self.test_params_value_max = QLineEdit("100")
+        self.test_params_value_max.textChanged.connect(self.on_value_changed_max)
+        # self.test_params_value.textChanged.connect(self.on_value_changed)
         test_params_layout.addWidget(self.test_params_label)
-        test_params_layout.addWidget(self.test_params_value)
+        test_params_layout.addWidget(self.test_params_value_min)
+        test_params_layout.addStretch(0)
+        test_params_layout.addWidget(self.test_params_value_max)
         test_params_layout.addStretch(20)
-
-        self.test_params_slider = QSlider(Qt.Horizontal, self)
-        self.test_params_slider.setFocusPolicy(Qt.StrongFocus)
-        self.test_params_slider.setTickPosition(QSlider.TicksBothSides)
-        self.test_params_slider.setTickInterval(1)
-        self.test_params_slider.setSingleStep(1)
-        self.test_params_slider.setMinimum(0)
-        self.test_params_slider.setMaximum(100)
-        self.test_params_slider.setValue(50)
-        self.test_params_slider.valueChanged[int].connect(self.on_slider_changed)
 
         path_answers_label = QLabel("Path to folder with default test results")
         self.path_answers_path = QLineEdit()
@@ -264,8 +275,6 @@ class MainWindow(QWidget):
         main_vertical_layout.addWidget(self.path_tests_path)
         main_vertical_layout.addStretch(1)
         main_vertical_layout.addLayout(test_params_layout)
-        main_vertical_layout.addStretch(0)
-        main_vertical_layout.addWidget(self.test_params_slider)
         main_vertical_layout.addStretch(1)
         main_vertical_layout.addWidget(path_answers_label)
         main_vertical_layout.addStretch(0)
@@ -287,17 +296,25 @@ class MainWindow(QWidget):
         self.setGeometry(300, 200, 1280, 720)
         self.setWindowTitle('QLineEdit')
 
-    # def on_test_progress(self):
+    def on_value_changed_min(self):
+        if len(self.test_params_value_min.text()) != 0:
+            try:
+                temp_value = int(self.test_params_value_min.text())
+            except ValueError:
+                temp_value = 1
+            if temp_value > 100 or temp_value < 1:
+                temp_value = 0
+            self.test_params_value_min.setText(str(temp_value))
 
-    def on_slider_changed(self):
-        self.test_params_value.setText(str(self.test_params_slider.value()))
-
-    def on_value_changed(self):
-        try:
-            temp_value = int(self.test_params_value.text())
-        except ValueError:
-            temp_value = 0
-        self.test_params_slider.setValue(temp_value)
+    def on_value_changed_max(self):
+        if len(self.test_params_value_max.text()) != 0:
+            try:
+                temp_value = int(self.test_params_value_max.text())
+            except ValueError:
+                temp_value = 100
+            if temp_value > 100 or temp_value < 1:
+                temp_value = 100
+            self.test_params_value_max.setText(str(temp_value))
 
     def on_calc_click(self):
         # path_exe = self.test_scenario_path.text()
@@ -305,24 +322,33 @@ class MainWindow(QWidget):
         path_exe = "C:\\Users\\Vladimir\\Desktop\\QA_practice\\пакеты\\test\\main.exe"
         # path_test = self.path_tests_path.text()
         path_test = "C:\\Users\\Vladimir\\Desktop\\QA_practice\\пакеты\\test\\test"
-        params = 4  # self.test_params_slider.value()
+        params =  [int(self.test_params_value_min.text()), int(self.test_params_value_max.text())]
+
         path_reference = "C:\\Users\\Vladimir\\Desktop\\QA_practice\\пакеты\\test\\reference"
         # self.path_answers_path.text()
         path_res = self.path_result_path.text()
         cmp = self.path_comp_path.text()
 
         # self.progressive_window.show()
-        result = self.kernel.start_test_by_path(path_exe, path_test, params, path_res, path_reference, cmp,
-                                                self.progressive_window.get_test_setter())
+        result, message = self.kernel.start_test_by_path(path_exe, path_test, params, path_res, path_reference, cmp,
+                                                         self.progressive_window.get_test_setter())
         # self.progressive_window.close()
-
+        # (None, error)
         if result is None:
+            self.error_window.set_title("Error!")
+            self.error_window.set_error(message)
             self.error_window.show()
         else:
-            test_info = get_configuration_list(result)
+            self.mask = [True for i in range(result.get_tests_count())]
+            test_info = get_configuration_list(result, self.mask)
             # self.data.append(result)
             self.result = ResultWindow(test_info)
             self.result.show()
+
+            if len(message) != 0:
+                self.error_window.set_title("Warning!")
+                self.error_window.set_error(f"{message}We used default")
+                self.error_window.show()
 
 
 class ResultWindow(QWidget):
@@ -352,7 +378,10 @@ class ResultWindow(QWidget):
 
         self.curve_status_show = [True for i in range(len(result_data))]
 
-        self.result_graph = PlotCanvas(width=8, height=8, curve_status_show=self.curve_status_show, data=result_data)
+        self.test_names = [test[0].name for test in result_data]
+
+        self.result_graph = PlotCanvas(width=8, height=8, curve_status_show=self.curve_status_show, data=result_data,
+                                       test_names=self.test_names)
         self.main_horizontal_layout = QHBoxLayout()
         self.main_horizontal_layout.setAlignment(Qt.AlignRight)
         self.main_horizontal_layout.addWidget(self.scroll)
@@ -365,7 +394,8 @@ class ResultWindow(QWidget):
         self.curve_status_show[number_of_curve] = status
         self.main_horizontal_layout.removeWidget(self.result_graph)
         self.result_graph.resize(0, 0)
-        self.result_graph = PlotCanvas(width=8, height=8, curve_status_show=self.curve_status_show, data=self.result)
+        self.result_graph = PlotCanvas(width=8, height=8, curve_status_show=self.curve_status_show, data=self.result,
+                                       test_names=self.test_names)
         self.main_horizontal_layout.addWidget(self.result_graph)
 
     def get_result_item(self, data_list, number_of_test):
@@ -403,22 +433,28 @@ class ResultWindow(QWidget):
 
 class PlotCanvas(FigureCanvas):
 
-    def __init__(self, width=7, height=7, dpi=80, data=None, curve_status_show=None):
+    def __init__(self, width=7, height=7, dpi=80, data=None, curve_status_show=None, test_names=[]):
         if curve_status_show is None:
             curve_status_show = []
         fig = Figure(figsize=(width, height), dpi=dpi)
         FigureCanvas.__init__(self, fig)
 
-        self.plot(data, curve_status_show)
+        self.plot(data, curve_status_show, test_names)
         self.draw()
 
-    def plot(self, data_list, curve_status_show):
+    def plot(self, data_list, curve_status_show, test_names):
         ax = self.figure.add_subplot(111)
         for test in range(len(data_list)):
             if curve_status_show[test]:
                 x = np.array([current_test.param_value for current_test in data_list[test]])
                 y = np.array([current_test.time for current_test in data_list[test]])
-                ax.plot(x, y, label=f"Test №{test + 1}")
+                ax.plot(x, y, label=f"Test: {test_names[test]}")
+                for config in range(len(data_list[test])):
+                    if data_list[test][config].status == "Complete":
+                        ax.scatter(x=data_list[test][config].param_value, y=data_list[test][config].time, color="green")
+                    else:
+                        ax.scatter(x=data_list[test][config].param_value, y=data_list[test][config].time, color="red")
+
 
         ax.legend()
         ax.set_ylabel("Execution time")
@@ -431,10 +467,18 @@ class ErrorWindow(QWidget):
     def __init__(self):
         super().__init__()
         layout = QVBoxLayout()
-        layout.addWidget(QLabel("Input data is not valid!"))
+        layout.addWidget(QLabel("Next data is not valid!"))
+        self.error_text = QLabel("")
+        layout.addWidget(self.error_text)
         self.setLayout(layout)
-        self.setGeometry(600, 500, 200, 50)
+        self.setGeometry(600, 500, 300, 100)
         self.setWindowTitle("Error!")
+
+    def set_error(self, error_text):
+        self.error_text.setText(error_text)
+
+    def set_title(self, title):
+        self.setWindowTitle(title)
 
 
 class TestConfiguration:
@@ -446,20 +490,21 @@ class TestConfiguration:
         self.param_value = count_of_cores
 
 
-def get_configuration_list(data_list):
-    conf_list = []
-    for test_index in range(data_list.get_tests_count()):
-        configuration_time_list = data_list.get_time_tests(test_index)
-        configuration_status_list = data_list.get_results_tests(test_index)
-        test_data = [TestConfiguration(
-            test_index + 1,  # test_name should be here
-            configuration_time_list[configuration_index],
-            "Complete" if (configuration_status_list[configuration_index]) else "Failed",
-            test_index + 1,
-            data_list.get_params()[0] + configuration_index)
-            for configuration_index in range(len(configuration_time_list))]
-        conf_list.append(test_data)
-    return conf_list
+def get_configuration_list(data_list, mask):
+    params = data_list.get_params()
+    delta = params[1] - params[0] + 1
+
+    configuration_time_list = data_list.get_time(mask)
+    configuration_status_list = data_list.get_results_tests(mask)
+    configuration_name_list = data_list.get_test_name(mask)
+
+    return np.array([[TestConfiguration(
+        configuration_name_list[j],  # test_name should be here
+        configuration_time_list[j][i],
+        "Complete" if (configuration_status_list[j][i]) else "Failed",
+        delta * j + i,
+        params[0] + i)
+        for i in range(delta)] for j in range(len(configuration_time_list))])
 
 
 if __name__ == "__main__":
