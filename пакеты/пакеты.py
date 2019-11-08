@@ -156,6 +156,7 @@ class Kernel:
         is_valid &= t
         if os.path.isfile(path_cmp):
             self.__cmp = self.__is_equal_file_user(path_cmp)
+        else:
             message += "path comparator\n"
         return is_valid, message
 
@@ -316,18 +317,18 @@ class MainWindow(QWidget):
             self.test_params_value_max.setText(str(temp_value))
 
     def on_calc_click(self):
-        # path_exe = self.test_scenario_path.text()
-        # "C:\\Users\\Vladimir\\Desktop\\QA_practice\\пакеты\\test\\test"
-        path_exe = "C:\\Users\\Vladimir\\Desktop\\QA_practice\\пакеты\\test\\main.exe"
-        # path_test = self.path_tests_path.text()
-        path_test = "C:\\Users\\Vladimir\\Desktop\\QA_practice\\пакеты\\test\\test"
-        params =  [2, 4]
-        #[int(self.test_params_value_min.text()), int(self.test_params_value_max.text())]
+        path_exe = self.test_scenario_path.text()
+        #path_exe = "C:\\Users\\Vladimir\\Desktop\\QA_practice\\пакеты\\test\\main.exe"
+        path_test = self.path_tests_path.text()
+        #path_test = "C:\\Users\\Vladimir\\Desktop\\QA_practice\\пакеты\\test\\test"
+        #params =  [2, 4]
+        params = [int(self.test_params_value_min.text()), int(self.test_params_value_max.text())]
 
-        path_reference = "C:\\Users\\Vladimir\\Desktop\\QA_practice\\пакеты\\test\\reference"
-        # self.path_answers_path.text()
+        #path_reference = "C:\\Users\\Vladimir\\Desktop\\QA_practice\\пакеты\\test\\reference"
+        path_reference =  self.path_answers_path.text()
         path_res = self.path_result_path.text()
-        cmp = "C:\\Users\\Vladimir\\Desktop\\QA_practice\\пакеты\\test\\comp.exe"# self.path_comp_path.text()
+        #cmp = "C:\\Users\\Vladimir\\Desktop\\QA_practice\\пакеты\\test\\comp.exe"#self.path_comp_path.text()
+        cmp = self.path_comp_path.text()
 
         result, message = self.kernel.start_test_by_path(path_exe, path_test, params, path_res, path_reference, cmp,
                                                          self.progressive_window.get_test_setter())
