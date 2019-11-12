@@ -148,7 +148,13 @@ class Kernel:
         else:
             count_test = 1
             if os.path.isdir(path_test):
-                count_test = len(os.listdir(path_test))
+                listdir = os.listdir(path_test)
+                count_test = len(listdir)
+                for file_name in listdir:
+                    if os.path.isdir(path_test + '\\' + file_name):
+                        t = False
+                        message += 'test include dir\n'
+                        break
         is_valid &= t
 
         if not os.path.isdir(self.__output):
@@ -161,8 +167,14 @@ class Kernel:
             message += "path reference\n"
         else:
             count_reference = 1
-            if os.path.isdir(path_test):
-                count_reference = len(os.listdir(path_test))
+            if os.path.isdir(path_reference):
+                listdir = os.listdir(path_reference)
+                count_reference = len(listdir)
+                for file_name in listdir:
+                    if os.path.isdir(path_reference + '\\' + file_name):
+                        t = False
+                        message += 'reference include dir\n'
+                        break
         is_valid &= t
 
         t = count_reference == count_test
@@ -193,9 +205,6 @@ class Kernel:
         if os.path.isdir(path_test):  # check path_test is fold or file
             tests = np.array(os.listdir(path_test))
             path_test += "\\"
-
-        self.__complete = 0
-        self.__count_tests = len(tests) * (self.params[1] - self.params[0] + 1)
 
         if path_reference == "":
             self.__start_tests_wo_ref(path_test, tests)
@@ -536,7 +545,9 @@ def data_for_test():
 class TestStringMethods(unittest.TestCase):
     kernel = Kernel()
     d = data_for_test()
+
 # corrects
+
     def correct_1(self):
         res, message = self.kernel.start_test_by_path(self.d[0], self.d[1], self.d[2], self.d[3], self.d[4], self.d[5])
         self.assertEqual(res is not None)
@@ -549,6 +560,7 @@ class TestStringMethods(unittest.TestCase):
         self.assertEqual(message, "")
 
 # errors
+
     def program_not_correct(self):
         res, message = self.kernel.start_test_by_path('c:\\mIN.exe', self.d[0], self.d[1], self.d[2],
                                                       self.d[3], self.d[4], self.d[5])
