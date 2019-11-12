@@ -5,9 +5,6 @@ import subprocess
 import sys
 import time
 
-os.mkdir('folder')
-os.mkdir('folder')
-
 import numpy as np
 from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import *
@@ -144,17 +141,35 @@ class Kernel:
         if not t: message += "path program\n"
         is_valid &= t
 
+        t = os.path.exists(path_test)
+        count_test = 0
+        if not t:
+            message += "path test\n"
+        else:
+            count_test = 1
+            if os.path.isdir(path_test):
+                count_test = len(os.listdir(path_test))
+        is_valid &= t
+
         if not os.path.isdir(self.__output):
             self.__output = os.getcwd() + "\\results"
             message += "path result\n"
 
-        t = os.path.exists(path_test)
-        if not t: message += "path test\n"
+        count_reference = 0
+        t = path_reference == "" or os.path.exists(path_reference)
+        if not t:
+            message += "path reference\n"
+        else:
+            count_reference = 1
+            if os.path.isdir(path_test):
+                count_reference = len(os.listdir(path_test))
         is_valid &= t
 
-        t = path_reference == "" or os.path.exists(path_reference)
-        if not t: message += "path reference\n"
+        t = count_reference == count_test
+        if not t:
+            message += 'quantity mismatch reference, test\n'
         is_valid &= t
+
         if os.path.isfile(path_cmp):
             self.__cmp = self.__is_equal_file_user(path_cmp)
         else:
@@ -175,7 +190,7 @@ class Kernel:
         self.__output += "\\"
 
         tests = np.array([""])
-        if path_test.find(".") == -1:  # check path_test is fold or file
+        if os.path.isdir(path_test):  # check path_test is fold or file
             tests = np.array(os.listdir(path_test))
             path_test += "\\"
 
@@ -188,7 +203,7 @@ class Kernel:
                         self.params), message
 
         reference = np.array([""])
-        if path_reference.find(".") == -1:  # check path_reference is    fold or file
+        if os.path.isdir(path_reference):  # check path_reference is    fold or file
             reference = np.array(os.listdir(path_reference))
             path_reference += "\\"
 
@@ -508,68 +523,97 @@ def get_configuration_list(data_list, mask):
 import unittest
 
 
+def data_for_test():
+    this_path = os.getcwd()
+    return [this_path + "\\test\\main.exe", # 0
+            this_path + "\\test\\test",     # 1
+            [3, 4],                         # 2
+            this_path + "\\test",           # 3
+            this_path + "\\test\\reference",# 4
+            this_path + "\\test\\comp.exe"] # 5
+
+
 class TestStringMethods(unittest.TestCase):
     kernel = Kernel()
-
-    def test_correct(self):
-        path_exe = "C:\\Users\\Vladimir\\Desktop\\QA_practice\\пакеты\\test\\main.exe"
-        path_test = "C:\\Users\\Vladimir\\Desktop\\QA_practice\\пакеты\\test\\test"
-        params = [3, 4]
-        path_reference = "C:\\Users\\Vladimir\\Desktop\\QA_practice\\пакеты\\test\\reference"
-        path_res = "C:\\Users\\Vladimir\\Desktop\\QA_practice\\пакеты\\test"
-        cmp = "C:\\Users\\Vladimir\\Desktop\\QA_practice\\пакеты\\test\\comp.exe"  # self.path_comp_path.text()
-
-        res, message = self.kernel.start_test_by_path(path_exe, path_test, params, path_res, path_reference, cmp)
-        self.assertEqual(res is not None, True)
+    d = data_for_test()
+# corrects
+    def correct_1(self):
+        res, message = self.kernel.start_test_by_path(self.d[0], self.d[1], self.d[2], self.d[3], self.d[4], self.d[5])
+        self.assertEqual(res is not None)
         self.assertEqual(message, "")
 
-    def test_prog_not_correct(self):
-        path_exe = "C:\\Users\\Vladimir\\Desktop\\QA_practice\\пакеты\\test\\mai.exe"
-        path_test = "C:\\Users\\Vladimir\\Desktop\\QA_practice\\пакеты\\test\\test"
-        params = [3, 4]
-        path_reference = "C:\\Users\\Vladimir\\Desktop\\QA_practice\\пакеты\\test\\reference"
-        path_res = "C:\\Users\\Vladimir\\Desktop\\QA_practice\\пакеты\\test"
-        cmp = "C:\\Users\\Vladimir\\Desktop\\QA_practice\\пакеты\\test\\comp.exe"  # self.path_comp_path.text()
+    def correct_2(self):
+        res, message = self.kernel.start_test_by_path(self.d[0], self.d[1] + '\\test1.txt', self.d[2],
+                                                      self.d[3] + '\\res2.txt', self.d[4], self.d[5])
+        self.assertEqual(res is not None)
+        self.assertEqual(message, "")
 
-        res, message = self.kernel.start_test_by_path(path_exe, path_test, params, path_res, path_reference, cmp)
+# errors
+    def program_not_correct(self):
+        res, message = self.kernel.start_test_by_path('c:\\mIN.exe', self.d[0], self.d[1], self.d[2],
+                                                      self.d[3], self.d[4], self.d[5])
         self.assertEqual(res, None)
         self.assertEqual(message, "path program" + '\n')
 
-    def test_test_not_correct(self):
-        path_exe = "C:\\Users\\Vladimir\\Desktop\\QA_practice\\пакеты\\test\\main.exe"
-        path_test = "C:\\Users\\Vladimir\\Desktop\\QA_pr"
-        params = [3, 4]
-        path_reference = "C:\\Users\\Vladimir\\Desktop\\QA_practice\\пакеты\\test\\reference"
-        path_res = "C:\\Users\\Vladimir\\Desktop\\QA_practice\\пакеты\\test"
-        cmp = "C:\\Users\\Vladimir\\Desktop\\QA_practice\\пакеты\\test\\comp.exe"  # self.path_comp_path.text()
-
-        res, message = self.kernel.start_test_by_path(path_exe, path_test, params, path_res, path_reference, cmp)
+    def test_not_correct(self):
+        res, message = self.kernel.start_test_by_path(self.d[0], 'c:\\main', self.d[2],
+                                                      self.d[3], self.d[4], self.d[5])
         self.assertEqual(res, None)
         self.assertEqual(message, "path test" + '\n')
 
-    def test_test_and_program_not_correct(self):
-        path_exe = "C:\\Users\\Vladimir\\Desktop\\QA_practice\\пакеtest\\main.exe"
-        path_test = "C:\\Users\\Vladimir\\Desktop\\QA_pr"
-        params = [3, 4]
-        path_reference = "C:\\Users\\Vladimir\\Desktop\\QA_practice\\пакеты\\test\\reference"
-        path_res = "C:\\Users\\Vladimir\\Desktop\\QA_practice\\пакеты\\test"
-        cmp = "C:\\Users\\Vladimir\\Desktop\\QA_practice\\пакеты\\test\\comp.exe"  # self.path_comp_path.text()
+    def test_include_dir(self):
+        os.mkdir(self.d[1] + '\\temp')
+        res, message = self.kernel.start_test_by_path(self.d[0], self.d[1], self.d[2],
+                                                      self.d[3], self.d[4], self.d[5])
+        self.assertEqual(res, None)
+        self.assertEqual(message, "test include dir\n")
+        os.rmdir(self.d[1] + '\\temp')
 
-        res, message = self.kernel.start_test_by_path(path_exe, path_test, params, path_res, path_reference, cmp)
+    def test_and_program_not_correct(self):
+        res, message = self.kernel.start_test_by_path('c:\\mIN.exe', 'c:\\main', self.d[2],
+                                                      self.d[3], self.d[4], self.d[5])
         self.assertEqual(res, None)
         self.assertEqual(message, 'path program\npath test\n')
 
-    def test_reference_not_correct(self):
-        path_exe = "C:\\Users\\Vladimir\\Desktop\\QA_practice\\пакеты\\test\\main.exe"
-        path_test = "C:\\Users\\Vladimir\\Desktop\\QA_practice\\пакеты\\test"
-        params = [3, 4]
-        path_reference = "C:\\Users\\Vladimir\\Desktop\\QA_practice\\пакеты\\test\\referenc"
-        path_res = "C:\\Users\\Vladimir\\Desktop\\QA_practice\\пакеты\\test"
-        cmp = "C:\\Users\\Vladimir\\Desktop\\QA_practice\\пакеты\\test\\comp.exe"  # self.path_comp_path.text()
-
-        res, message = self.kernel.start_test_by_path(path_exe, path_test, params, path_res, path_reference, cmp)
+    def reference_not_correct(self):
+        res, message = self.kernel.start_test_by_path(self.d[0], self.d[1], self.d[2],
+                                                      'file_name', self.d[4], self.d[5])
         self.assertEqual(res, None)
         self.assertEqual(message, 'path reference\n')
+
+    def reference_include_dir(self):
+        os.mkdir(self.d[3] + '\\temp')
+        res, message = self.kernel.start_test_by_path(self.d[0], self.d[1], self.d[2],
+                                                      self.d[3], self.d[4], self.d[5])
+        self.assertEqual(res, None)
+        self.assertEqual(message, 'reference include dir\n')
+        os.rmdir(self.d[3] + '\\temp')
+
+    def mismatch_test_reference_1(self):
+        res, message = self.kernel.start_test_by_path(self.d[0], self.d[1], self.d[2],
+                                                      self.d[3] + '\\res1.txt', self.d[4], self.d[5])
+        self.assertEqual(res, None)
+        self.assertEqual(message, 'quantity mismatch reference, test\n')
+
+    def mismatch_test_reference_2(self):
+        res, message = self.kernel.start_test_by_path(self.d[0], self.d[1] + '\\test1.txt', self.d[2],
+                                                      self.d[3], self.d[4], self.d[5])
+        self.assertEqual(res, None)
+        self.assertEqual(message, 'quantity mismatch reference, test\n')
+
+# warnings
+
+    def result_not_correct(self):
+        res, message = self.kernel.start_test_by_path(self.d[0], self.d[1], self.d[2],
+                                                      self.d[3], 'file_name', self.d[5])
+        self.assertEqual(res is not None)
+        self.assertEqual(message, 'path result\n')
+
+    def cmp_not_correct(self):
+        res, message = self.kernel.start_test_by_path(self.d[0], self.d[1], self.d[2],
+                                                      self.d[3],  self.d[4], self.d[4])
+        self.assertEqual(res is not None)
+        self.assertEqual(message, 'path comparator\n')
 
 if __name__ == "__main__":
     unittest.main()
