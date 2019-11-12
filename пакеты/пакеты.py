@@ -47,8 +47,10 @@ class Kernel:
 
     @staticmethod
     def __is_equal_file_default(path1, path2):
-        file1 = open(path1, 'r')  # tyt nado ykazuvat to chto nakhoditsa pod somneniem
-        file2 = open(path2, 'r')  # tyt etalon
+        if not os.path.isfile(path1) or not os.path.isfile(path1):
+            return False
+        file1 = open(path1, 'r')  # result
+        file2 = open(path2, 'r')  # reference
         diff = difflib.ndiff(file1.readlines(), file2.readlines())
         return ''.join(x for x in diff if x.startswith('- ')) == ""
 
@@ -59,10 +61,11 @@ class Kernel:
     @staticmethod
     def __is_equal_file_user(path):
         def func(path1, path2):
-            y = subprocess.check_output([path, path1, path2]).__str__() == 'b\'True\''
-            #y = subprocess.call([path, path1, path2])
-            #y = subprocess.Popen([path, path1, path2])
-            return y
+            if not os.path.isfile(path1) or not os.path.isfile(path1):
+                return False
+            # y = subprocess.call([path, path1, path2])
+            # y = subprocess.Popen([path, path1, path2])
+            return subprocess.check_output([path, path1, path2]).__str__() == 'b\'True\''
 
         return func
 
@@ -72,9 +75,6 @@ class Kernel:
         self.params = np.array([int(1), int(1)])
         self.__matrix_time = np.array([])
         self.__matrix_is_complete = np.array([])
-        self.__progress_callback = None
-        self.__complete = 0
-        self.__count_tests = 0
         self.__cmp = self.__is_equal_file_default
 
     def __execute_test(self, test, res_i, reference, stat):
@@ -88,25 +88,25 @@ class Kernel:
             subprocess.call([self.__program, param, test, res])  # without exception
             time_work[i] = time.clock() - timer
             is_complete[i] = self.__cmp(res, reference)
-            stat.write(test + ', ' + param + ', ' + time_work[i] + ', ' + is_complete[i] + '\n')
+            stat.write(test + '; ' + param + '; ' + (time_work[i]).__str__() + '; ' + (is_complete[i]).__str__() + '\n')
         return [time_work, is_complete]
 
-    def __execute_test_wo_ref(self, test):  # without output
+    def __execute_test_wo_ref(self, test, stat):  # without output
         time_work = -1 * np.ones(int(self.params[1] + 1 - self.params[0]))
         for i in range(int(self.params[1] + 1 - self.params[0])):
+            param = (i + self.params[0]).__str__()
             timer = time.clock()
-            subprocess.call([self.__program, (i + self.params[0]).__str__(), test])
+            subprocess.call([self.__program, param, test])
             time_work[i] = time.clock() - timer
-            self.__complete += 1
-            self.__progress_callback(self.__complete, self.__count_tests)
+            stat.write(test + '; ' + param + '; ' + (time_work[i]).__str__() + '\n')
         return time_work
 
     def __start_tests(self, path_test, tests, path_reference, references):
         self.__matrix_time = np.array([np.zeros(self.params[1] + 1 - self.params[0])])
         self.__matrix_is_complete = np.array([[False for i in range(self.params[1] + 1 - self.params[0])]])
         stat = open(self.__output + "statistic.csv", 'w')
-        #stat.write(self.params.__str__() + "\n")
-        stat.write("test_name, param, time, result\n")
+        # stat.write(self.params.__str__() + "\n")
+        stat.write("test_name; param; time; result\n")
         for i in range(len(tests)):
             test = path_test + tests[i]
             reference = path_reference + references[i]
@@ -115,23 +115,22 @@ class Kernel:
             a, b = self.__execute_test(test, res, reference, stat)
             self.__matrix_time = np.append(self.__matrix_time, [a], axis=0)
             self.__matrix_is_complete = np.append(self.__matrix_is_complete, [b], axis=0)
-            #stat.write(tests[i] + "\n")
-            #stat.write("time: " + self.__matrix_time[i + 1].__str__() + "\n")
-            #stat.write("result: " + self.__matrix_is_complete[i + 1].__str__() + "\n")
+            # stat.write(tests[i] + "\n")
+            # stat.write("time: " + self.__matrix_time[i + 1].__str__() + "\n")
+            # stat.write("result: " + self.__matrix_is_complete[i + 1].__str__() + "\n")
         self.__matrix_time = np.delete(self.__matrix_time, 0, axis=0)
         self.__matrix_is_complete = np.delete(self.__matrix_is_complete, 0, axis=0)
-        #stat.write("all time: " + np.sum(self.__matrix_time, axis=0).__str__())
+        # stat.write("all time: " + np.sum(self.__matrix_time, axis=0).__str__())
         stat.close()
 
     def __start_tests_wo_ref(self, path_test, tests):
-        self.__matrix_time = np.array(len(tests))
+        self.__matrix_time = np.array([np.zeros(self.params[1] + 1 - self.params[0])])
         stat = open(self.__output + "statistic.csv", 'w')
+        stat.write("test_name; param; time\n")
         for i in range(len(tests)):
             test = path_test + tests[i]
-            self.__matrix_time[i] = self.__execute_test_wo_ref(test)
-            stat.write(tests[i] + "\n")
-            stat.write("time: " + self.__matrix_time[i].__str__() + "\n")
-        stat.write("all time: " + np.sum(self.__matrix_time, axis=0).__str__())
+            self.__matrix_time = np.append(self.__matrix_time, [self.__execute_test_wo_ref(test, stat)], axis=0)
+        self.__matrix_time = np.delete(self.__matrix_time, 0, axis=0)
         stat.close()
 
     def __validation(self, path_test, path_reference, path_cmp):
@@ -159,11 +158,10 @@ class Kernel:
             message += "path comparator\n"
         return is_valid, message
 
-    def start_test_by_path(self, path_exe, path_test, params, path_res, path_reference, path_cmp, lambda_callback):
+    def start_test_by_path(self, path_exe, path_test, params, path_res, path_reference, path_cmp, ):
         self.__program = path_exe
         self.params = [min(params), max(params)]
-        self.__output = path_res +
-        self.__progress_callback = lambda_callback
+        self.__output = path_res
         is_valid, message = self.__validation(path_test, path_reference, path_cmp)
         if not is_valid:
             return None, message
@@ -318,16 +316,16 @@ class MainWindow(QWidget):
 
     def on_calc_click(self):
         path_exe = self.test_scenario_path.text()
-        #path_exe = "C:\\Users\\Vladimir\\Desktop\\QA_practice\\пакеты\\test\\main.exe"
+        # path_exe = "C:\\Users\\Vladimir\\Desktop\\QA_practice\\пакеты\\test\\main.exe"
         path_test = self.path_tests_path.text()
-        #path_test = "C:\\Users\\Vladimir\\Desktop\\QA_practice\\пакеты\\test\\test"
-        #params =  [2, 4]
+        # path_test = "C:\\Users\\Vladimir\\Desktop\\QA_practice\\пакеты\\test\\test"
+        # params =  [2, 4]
         params = [int(self.test_params_value_min.text()), int(self.test_params_value_max.text())]
 
-        #path_reference = "C:\\Users\\Vladimir\\Desktop\\QA_practice\\пакеты\\test\\reference"
-        path_reference =  self.path_answers_path.text()
+        # path_reference = "C:\\Users\\Vladimir\\Desktop\\QA_practice\\пакеты\\test\\reference"
+        path_reference = self.path_answers_path.text()
         path_res = self.path_result_path.text()
-        #cmp = "C:\\Users\\Vladimir\\Desktop\\QA_practice\\пакеты\\test\\comp.exe"#self.path_comp_path.text()
+        # cmp = "C:\\Users\\Vladimir\\Desktop\\QA_practice\\пакеты\\test\\comp.exe"#self.path_comp_path.text()
         cmp = self.path_comp_path.text()
 
         result, message = self.kernel.start_test_by_path(path_exe, path_test, params, path_res, path_reference, cmp,
@@ -453,7 +451,6 @@ class PlotCanvas(FigureCanvas):
                     else:
                         ax.scatter(x=data_list[test][config].param_value, y=data_list[test][config].time, color="red")
 
-
         ax.legend()
         ax.set_ylabel("Execution time")
         ax.set_xlabel("Param value")
@@ -505,7 +502,74 @@ def get_configuration_list(data_list, mask):
         for i in range(delta)] for j in range(len(configuration_time_list))])
 
 
+import unittest
+
+
+class TestStringMethods(unittest.TestCase):
+    kernel = Kernel()
+
+    def test_correct(self):
+        path_exe = "C:\\Users\\Vladimir\\Desktop\\QA_practice\\пакеты\\test\\main.exe"
+        path_test = "C:\\Users\\Vladimir\\Desktop\\QA_practice\\пакеты\\test\\test"
+        params = [3, 4]
+        path_reference = "C:\\Users\\Vladimir\\Desktop\\QA_practice\\пакеты\\test\\reference"
+        path_res = "C:\\Users\\Vladimir\\Desktop\\QA_practice\\пакеты\\test"
+        cmp = "C:\\Users\\Vladimir\\Desktop\\QA_practice\\пакеты\\test\\comp.exe"  # self.path_comp_path.text()
+
+        res, message = self.kernel.start_test_by_path(path_exe, path_test, params, path_res, path_reference, cmp)
+        self.assertEqual(res is not None, True)
+        self.assertEqual(message, "")
+
+    def test_prog_not_correct(self):
+        path_exe = "C:\\Users\\Vladimir\\Desktop\\QA_practice\\пакеты\\test\\mai.exe"
+        path_test = "C:\\Users\\Vladimir\\Desktop\\QA_practice\\пакеты\\test\\test"
+        params = [3, 4]
+        path_reference = "C:\\Users\\Vladimir\\Desktop\\QA_practice\\пакеты\\test\\reference"
+        path_res = "C:\\Users\\Vladimir\\Desktop\\QA_practice\\пакеты\\test"
+        cmp = "C:\\Users\\Vladimir\\Desktop\\QA_practice\\пакеты\\test\\comp.exe"  # self.path_comp_path.text()
+
+        res, message = self.kernel.start_test_by_path(path_exe, path_test, params, path_res, path_reference, cmp)
+        self.assertEqual(res, None)
+        self.assertEqual(message, "path program" + '\n')
+
+    def test_test_not_correct(self):
+        path_exe = "C:\\Users\\Vladimir\\Desktop\\QA_practice\\пакеты\\test\\main.exe"
+        path_test = "C:\\Users\\Vladimir\\Desktop\\QA_pr"
+        params = [3, 4]
+        path_reference = "C:\\Users\\Vladimir\\Desktop\\QA_practice\\пакеты\\test\\reference"
+        path_res = "C:\\Users\\Vladimir\\Desktop\\QA_practice\\пакеты\\test"
+        cmp = "C:\\Users\\Vladimir\\Desktop\\QA_practice\\пакеты\\test\\comp.exe"  # self.path_comp_path.text()
+
+        res, message = self.kernel.start_test_by_path(path_exe, path_test, params, path_res, path_reference, cmp)
+        self.assertEqual(res, None)
+        self.assertEqual(message, "path test" + '\n')
+
+    def test_test_and_program_not_correct(self):
+        path_exe = "C:\\Users\\Vladimir\\Desktop\\QA_practice\\пакеtest\\main.exe"
+        path_test = "C:\\Users\\Vladimir\\Desktop\\QA_pr"
+        params = [3, 4]
+        path_reference = "C:\\Users\\Vladimir\\Desktop\\QA_practice\\пакеты\\test\\reference"
+        path_res = "C:\\Users\\Vladimir\\Desktop\\QA_practice\\пакеты\\test"
+        cmp = "C:\\Users\\Vladimir\\Desktop\\QA_practice\\пакеты\\test\\comp.exe"  # self.path_comp_path.text()
+
+        res, message = self.kernel.start_test_by_path(path_exe, path_test, params, path_res, path_reference, cmp)
+        self.assertEqual(res, None)
+        self.assertEqual(message, 'path program\npath test\n')
+
+    def test_reference_not_correct(self):
+        path_exe = "C:\\Users\\Vladimir\\Desktop\\QA_practice\\пакеты\\test\\main.exe"
+        path_test = "C:\\Users\\Vladimir\\Desktop\\QA_practice\\пакеты\\test"
+        params = [3, 4]
+        path_reference = "C:\\Users\\Vladimir\\Desktop\\QA_practice\\пакеты\\test\\referenc"
+        path_res = "C:\\Users\\Vladimir\\Desktop\\QA_practice\\пакеты\\test"
+        cmp = "C:\\Users\\Vladimir\\Desktop\\QA_practice\\пакеты\\test\\comp.exe"  # self.path_comp_path.text()
+
+        res, message = self.kernel.start_test_by_path(path_exe, path_test, params, path_res, path_reference, cmp)
+        self.assertEqual(res, None)
+        self.assertEqual(message, 'path reference\n')
+
 if __name__ == "__main__":
+    unittest.main()
     app = QApplication(sys.argv)
     ex = MainWindow()
     ex.show()
