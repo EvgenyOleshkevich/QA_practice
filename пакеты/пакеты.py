@@ -77,7 +77,7 @@ class Kernel:
         self.__count_tests = 0
         self.__cmp = self.__is_equal_file_default
 
-    def __execute_test(self, test, res_i, reference):
+    def __execute_test(self, test, res_i, reference, stat):
         time_work = -1 * np.ones(int(self.params[1] + 1 - self.params[0]))
         is_complete = np.array([False for i in range(self.params[1] + 1 - self.params[0])])
         for i in range(int(self.params[1] + 1 - self.params[0])):
@@ -88,8 +88,7 @@ class Kernel:
             subprocess.call([self.__program, param, test, res])  # without exception
             time_work[i] = time.clock() - timer
             is_complete[i] = self.__cmp(res, reference)
-            self.__complete += 1
-            self.__progress_callback(self.__complete, self.__count_tests)
+            stat.write(test + ', ' + param + ', ' + time_work[i] + ', ' + is_complete[i] + '\n')
         return [time_work, is_complete]
 
     def __execute_test_wo_ref(self, test):  # without output
@@ -105,23 +104,23 @@ class Kernel:
     def __start_tests(self, path_test, tests, path_reference, references):
         self.__matrix_time = np.array([np.zeros(self.params[1] + 1 - self.params[0])])
         self.__matrix_is_complete = np.array([[False for i in range(self.params[1] + 1 - self.params[0])]])
-        stat = open(self.__output + "statistic.txt", 'w')
-        stat.write(self.params.__str__() + "\n")
+        stat = open(self.__output + "statistic.csv", 'w')
+        #stat.write(self.params.__str__() + "\n")
+        stat.write("test_name, param, time, result\n")
         for i in range(len(tests)):
             test = path_test + tests[i]
             reference = path_reference + references[i]
             res = self.__output + i.__str__()
             os.mkdir(res)
-            a, b = self.__execute_test(test, res, reference)
+            a, b = self.__execute_test(test, res, reference, stat)
             self.__matrix_time = np.append(self.__matrix_time, [a], axis=0)
             self.__matrix_is_complete = np.append(self.__matrix_is_complete, [b], axis=0)
-            # self.__matrix_is_complete[i] = b
-            stat.write(tests[i] + "\n")
-            stat.write("time: " + self.__matrix_time[i + 1].__str__() + "\n")
-            stat.write("result: " + self.__matrix_is_complete[i + 1].__str__() + "\n")
+            #stat.write(tests[i] + "\n")
+            #stat.write("time: " + self.__matrix_time[i + 1].__str__() + "\n")
+            #stat.write("result: " + self.__matrix_is_complete[i + 1].__str__() + "\n")
         self.__matrix_time = np.delete(self.__matrix_time, 0, axis=0)
         self.__matrix_is_complete = np.delete(self.__matrix_is_complete, 0, axis=0)
-        stat.write("all time: " + np.sum(self.__matrix_time, axis=0).__str__())
+        #stat.write("all time: " + np.sum(self.__matrix_time, axis=0).__str__())
         stat.close()
 
     def __start_tests_wo_ref(self, path_test, tests):
