@@ -5,6 +5,9 @@ import subprocess
 import sys
 import time
 
+os.mkdir('folder')
+os.mkdir('folder')
+
 import numpy as np
 from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import *
@@ -240,10 +243,10 @@ class MainWindow(QWidget):
 
         test_params_layout = QHBoxLayout()
         test_params_layout.addStretch(0)
-        self.test_params_label = QLabel("Current Param Range (min = 1, max = 100)")
+        self.test_params_label = QLabel("Current Param Range (min = 1, max = 1000)")
         self.test_params_value_min = QLineEdit("1")
         self.test_params_value_min.textChanged.connect(self.on_value_changed_min)
-        self.test_params_value_max = QLineEdit("100")
+        self.test_params_value_max = QLineEdit("1000")
         self.test_params_value_max.textChanged.connect(self.on_value_changed_max)
         test_params_layout.addWidget(self.test_params_label)
         test_params_layout.addWidget(self.test_params_value_min)
@@ -300,7 +303,7 @@ class MainWindow(QWidget):
                 temp_value = int(self.test_params_value_min.text())
             except ValueError:
                 temp_value = 1
-            if temp_value > 100 or temp_value < 1:
+            if temp_value > 1000 or temp_value < 1:
                 temp_value = 0
             self.test_params_value_min.setText(str(temp_value))
 
@@ -309,9 +312,9 @@ class MainWindow(QWidget):
             try:
                 temp_value = int(self.test_params_value_max.text())
             except ValueError:
-                temp_value = 100
-            if temp_value > 100 or temp_value < 1:
-                temp_value = 100
+                temp_value = 1000
+            if temp_value > 1000 or temp_value < 1:
+                temp_value = 1000
             self.test_params_value_max.setText(str(temp_value))
 
     def on_calc_click(self):
