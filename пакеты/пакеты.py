@@ -5,6 +5,9 @@ import subprocess
 import sys
 import time
 
+os.mkdir('folder')
+os.mkdir('folder')
+
 import numpy as np
 from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import *
@@ -60,8 +63,8 @@ class Kernel:
     def __is_equal_file_user(path):
         def func(path1, path2):
             y = subprocess.check_output([path, path1, path2]).__str__() == 'b\'True\''
-            #y = subprocess.call([path, path1, path2])
-            #y = subprocess.Popen([path, path1, path2])
+            # y = subprocess.call([path, path1, path2])
+            # y = subprocess.Popen([path, path1, path2])
             return y
 
         return func
@@ -105,7 +108,7 @@ class Kernel:
         self.__matrix_time = np.array([np.zeros(self.params[1] + 1 - self.params[0])])
         self.__matrix_is_complete = np.array([[False for i in range(self.params[1] + 1 - self.params[0])]])
         stat = open(self.__output + "statistic.csv", 'w')
-        #stat.write(self.params.__str__() + "\n")
+        # stat.write(self.params.__str__() + "\n")
         stat.write("test_name, param, time, result\n")
         for i in range(len(tests)):
             test = path_test + tests[i]
@@ -115,12 +118,12 @@ class Kernel:
             a, b = self.__execute_test(test, res, reference, stat)
             self.__matrix_time = np.append(self.__matrix_time, [a], axis=0)
             self.__matrix_is_complete = np.append(self.__matrix_is_complete, [b], axis=0)
-            #stat.write(tests[i] + "\n")
-            #stat.write("time: " + self.__matrix_time[i + 1].__str__() + "\n")
-            #stat.write("result: " + self.__matrix_is_complete[i + 1].__str__() + "\n")
+            # stat.write(tests[i] + "\n")
+            # stat.write("time: " + self.__matrix_time[i + 1].__str__() + "\n")
+            # stat.write("result: " + self.__matrix_is_complete[i + 1].__str__() + "\n")
         self.__matrix_time = np.delete(self.__matrix_time, 0, axis=0)
         self.__matrix_is_complete = np.delete(self.__matrix_is_complete, 0, axis=0)
-        #stat.write("all time: " + np.sum(self.__matrix_time, axis=0).__str__())
+        # stat.write("all time: " + np.sum(self.__matrix_time, axis=0).__str__())
         stat.close()
 
     def __start_tests_wo_ref(self, path_test, tests):
@@ -162,7 +165,7 @@ class Kernel:
     def start_test_by_path(self, path_exe, path_test, params, path_res, path_reference, path_cmp, lambda_callback):
         self.__program = path_exe
         self.params = [min(params), max(params)]
-        self.__output = path_res +
+        self.__output = path_res
         self.__progress_callback = lambda_callback
         is_valid, message = self.__validation(path_test, path_reference, path_cmp)
         if not is_valid:
@@ -242,10 +245,10 @@ class MainWindow(QWidget):
 
         test_params_layout = QHBoxLayout()
         test_params_layout.addStretch(0)
-        self.test_params_label = QLabel("Current Param Range (min = 1, max = 100)")
+        self.test_params_label = QLabel("Current Param Range (min = 1, max = 1000)")
         self.test_params_value_min = QLineEdit("1")
         self.test_params_value_min.textChanged.connect(self.on_value_changed_min)
-        self.test_params_value_max = QLineEdit("100")
+        self.test_params_value_max = QLineEdit("1000")
         self.test_params_value_max.textChanged.connect(self.on_value_changed_max)
         test_params_layout.addWidget(self.test_params_label)
         test_params_layout.addWidget(self.test_params_value_min)
@@ -302,7 +305,7 @@ class MainWindow(QWidget):
                 temp_value = int(self.test_params_value_min.text())
             except ValueError:
                 temp_value = 1
-            if temp_value > 100 or temp_value < 1:
+            if temp_value > 1000 or temp_value < 1:
                 temp_value = 0
             self.test_params_value_min.setText(str(temp_value))
 
@@ -311,23 +314,23 @@ class MainWindow(QWidget):
             try:
                 temp_value = int(self.test_params_value_max.text())
             except ValueError:
-                temp_value = 100
-            if temp_value > 100 or temp_value < 1:
-                temp_value = 100
+                temp_value = 1000
+            if temp_value > 1000 or temp_value < 1:
+                temp_value = 1000
             self.test_params_value_max.setText(str(temp_value))
 
     def on_calc_click(self):
         path_exe = self.test_scenario_path.text()
-        #path_exe = "C:\\Users\\Vladimir\\Desktop\\QA_practice\\пакеты\\test\\main.exe"
+        # path_exe = "C:\\Users\\Vladimir\\Desktop\\QA_practice\\пакеты\\test\\main.exe"
         path_test = self.path_tests_path.text()
-        #path_test = "C:\\Users\\Vladimir\\Desktop\\QA_practice\\пакеты\\test\\test"
-        #params =  [2, 4]
+        # path_test = "C:\\Users\\Vladimir\\Desktop\\QA_practice\\пакеты\\test\\test"
+        # params =  [2, 4]
         params = [int(self.test_params_value_min.text()), int(self.test_params_value_max.text())]
 
-        #path_reference = "C:\\Users\\Vladimir\\Desktop\\QA_practice\\пакеты\\test\\reference"
-        path_reference =  self.path_answers_path.text()
+        # path_reference = "C:\\Users\\Vladimir\\Desktop\\QA_practice\\пакеты\\test\\reference"
+        path_reference = self.path_answers_path.text()
         path_res = self.path_result_path.text()
-        #cmp = "C:\\Users\\Vladimir\\Desktop\\QA_practice\\пакеты\\test\\comp.exe"#self.path_comp_path.text()
+        # cmp = "C:\\Users\\Vladimir\\Desktop\\QA_practice\\пакеты\\test\\comp.exe"#self.path_comp_path.text()
         cmp = self.path_comp_path.text()
 
         result, message = self.kernel.start_test_by_path(path_exe, path_test, params, path_res, path_reference, cmp,
@@ -452,7 +455,6 @@ class PlotCanvas(FigureCanvas):
                         ax.scatter(x=data_list[test][config].param_value, y=data_list[test][config].time, color="green")
                     else:
                         ax.scatter(x=data_list[test][config].param_value, y=data_list[test][config].time, color="red")
-
 
         ax.legend()
         ax.set_ylabel("Execution time")
