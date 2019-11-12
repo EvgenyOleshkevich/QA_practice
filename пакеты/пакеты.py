@@ -125,7 +125,7 @@ class Kernel:
 
     def __start_tests_wo_ref(self, path_test, tests):
         self.__matrix_time = np.array(len(tests))
-        stat = open(self.__output + "statistic.txt", 'w')
+        stat = open(self.__output + "statistic.csv", 'w')
         for i in range(len(tests)):
             test = path_test + tests[i]
             self.__matrix_time[i] = self.__execute_test_wo_ref(test)
@@ -162,11 +162,12 @@ class Kernel:
     def start_test_by_path(self, path_exe, path_test, params, path_res, path_reference, path_cmp, lambda_callback):
         self.__program = path_exe
         self.params = [min(params), max(params)]
-        self.__output = path_res
+        self.__output = path_res +
         self.__progress_callback = lambda_callback
         is_valid, message = self.__validation(path_test, path_reference, path_cmp)
         if not is_valid:
             return None, message
+        self.__output += '\\results'
         if os.path.isdir(self.__output):
             shutil.rmtree(self.__output)
         os.mkdir(self.__output)
