@@ -198,8 +198,6 @@ class Kernel:
         self.__output += '\\results'
         if os.path.isdir(self.__output):
             shutil.rmtree(self.__output)
-        os.mkdir(self.__output)
-        self.__output += "\\"
 
         tests = np.array([""])
         if os.path.isdir(path_test):  # check path_test is fold or file
@@ -207,6 +205,8 @@ class Kernel:
             path_test += "\\"
 
         if path_reference == "":
+            os.mkdir(self.__output)
+            self.__output += "\\"
             self.__start_tests_wo_ref(path_test, tests)
             return Data(self.__matrix_time, self.__matrix_is_complete, path_test + "statistic.txt", tests,
                         self.params), message
@@ -216,6 +216,8 @@ class Kernel:
             reference = np.array(os.listdir(path_reference))
             path_reference += "\\"
 
+        os.mkdir(self.__output)
+        self.__output += "\\"
         self.__start_tests(path_test, tests, path_reference, reference)
         return Data(self.__matrix_time, self.__matrix_is_complete, path_test + "statistic.txt", tests,
                     self.params), message
@@ -640,7 +642,7 @@ class TestKernel(unittest.TestCase):
 
 
 if __name__ == "__main__":
-   # unittest.main()
+    unittest.main()
     app = QApplication(sys.argv)
     ex = MainWindow()
     ex.show()
