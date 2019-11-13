@@ -534,23 +534,32 @@ import unittest
 
 def data_for_test():
     this_path = os.getcwd()
-    return [this_path + "\\test\\main.exe", # 0
-            this_path + "\\test\\test",     # 1
-            [3, 4],                         # 2
-            this_path + "\\test",           # 3
-            this_path + "\\test\\reference",# 4
-            this_path + "\\test\\comp.exe"] # 5
+    return [this_path + "\\test\\main.exe",  # 0
+            this_path + "\\test\\test",  # 1
+            [3, 4],  # 2
+            this_path + "\\test",  # 3
+            this_path + "\\test\\reference",  # 4
+            this_path + "\\test\\comp.exe"]  # 5
 
 
 class TestStringMethods(unittest.TestCase):
     kernel = Kernel()
     d = data_for_test()
+    error_window = ErrorWindow()
+    error_window.set_title("Error!")
+    error_window.set_error("Some errors!")
 
-# corrects
+    # corrects
+
+    def error_window_title(self):
+        self.assertEqual("Error!", self.error_window.windowTitle())
+
+    def error_window_content(self):
+        self.assertEqual("Some errors!", self.error_window.error_text.text())
 
     def correct_1(self):
         res, message = self.kernel.start_test_by_path(self.d[0], self.d[1], self.d[2], self.d[3], self.d[4], self.d[5])
-        self.assertEqual(res is not None)
+        self.assertTrue(res is not None)
         self.assertEqual(message, "")
 
     def correct_2(self):
@@ -559,7 +568,7 @@ class TestStringMethods(unittest.TestCase):
         self.assertEqual(res is not None)
         self.assertEqual(message, "")
 
-# errors
+    # errors
 
     def program_not_correct(self):
         res, message = self.kernel.start_test_by_path('c:\\mIN.exe', self.d[0], self.d[1], self.d[2],
@@ -613,7 +622,7 @@ class TestStringMethods(unittest.TestCase):
         self.assertEqual(res, None)
         self.assertEqual(message, 'quantity mismatch reference, test\n')
 
-# warnings
+    # warnings
 
     def result_not_correct(self):
         res, message = self.kernel.start_test_by_path(self.d[0], self.d[1], self.d[2],
@@ -623,9 +632,10 @@ class TestStringMethods(unittest.TestCase):
 
     def cmp_not_correct(self):
         res, message = self.kernel.start_test_by_path(self.d[0], self.d[1], self.d[2],
-                                                      self.d[3],  self.d[4], self.d[4])
+                                                      self.d[3], self.d[4], self.d[4])
         self.assertEqual(res is not None)
         self.assertEqual(message, 'path comparator\n')
+
 
 if __name__ == "__main__":
     unittest.main()
