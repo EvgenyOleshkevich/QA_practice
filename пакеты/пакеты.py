@@ -6,11 +6,13 @@ import sys
 import time
 
 import numpy as np
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import Qt, QThread, pyqtSignal
 from PyQt5.QtWidgets import *
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 from threading import Thread
+from PyQt5.QtCore import QBasicTimer
+
 
 class Data:
     def get_time(self, mask): return self.matrix_time[mask]
@@ -224,6 +226,27 @@ class Kernel:
                     self.params), message
 
 
+class KernelThread(QThread):
+    kernel = Kernel()
+
+    def __init__(self, path_exe, path_test, params, path_res, path_reference, path_cmp):
+        super().__init__()
+        self.path_exe = path_exe
+        self.path_test = path_test
+        self.params = params
+        self.path_res = path_res
+        self.path_reference = path_reference
+        self.path_cmp = path_cmp
+
+    complete_tests = pyqtSignal(int)
+    all_tests = pyqtSignal(int)
+
+    def run(self):
+        self.result, self.message = kernel.start_test_by_path(self.path_exe, self.path_test, self.params, self.path_res,
+                                                              self.path_reference,
+                                                              self.path_cmp)
+
+
 # Next code is UI
 
 
@@ -231,8 +254,12 @@ class ProgressWindow(QWidget):
 
     def __init__(self):
         super().__init__()
+        self.timer.start(1000, self)
+        self.complete = 0
         self.main_vertical_layout = QVBoxLayout()
         self.progress_bar = QProgressBar(self)
+        self.number_of_tests = number_of_tests
+        self.progress_bar.setMaximum(number_of_tests)
         self.progress_label = QLabel("Сделано столько то тестов")
         self.main_vertical_layout.addWidget(self.progress_label)
         self.main_vertical_layout.addWidget(self.progress_bar)
@@ -240,12 +267,15 @@ class ProgressWindow(QWidget):
         self.setWindowTitle("Progress:")
         self.setGeometry(400, 400, 300, 70)
 
-    def set_test_status(self, complete, number_of_test):
-        self.progress_bar.setValue(complete * 100 / number_of_test)
-        self.progress_label.setText(f"Complete {complete} tests of {number_of_test}")
+    def set_number_of_tests(self, val):
+        self.number_of_tests = val
 
-    def get_test_setter(self):
-        return self.set_test_status
+    def set_test_complete(self, val):
+        self.progress_bar.setValue(val)
+        self.progress_label.setText(f"Complete {val} tests of {self.number_of_tests}")
+
+    # def get_test_setter(self):
+    #     return self.set_test_status
 
 
 class MainWindow(QWidget):
@@ -253,7 +283,6 @@ class MainWindow(QWidget):
     def __init__(self):
         super().__init__()
         self.error_window = ErrorWindow()
-        self.kernel = Kernel()
         self.data = []
         self.mask = []
         self.progressive_window = ProgressWindow()
@@ -358,10 +387,21 @@ class MainWindow(QWidget):
         # cmp = "C:\\Users\\Vladimir\\Desktop\\QA_practice\\пакеты\\test\\comp.exe"#self.path_comp_path.text()
         cmp = self.path_comp_path.text()
         d = data_for_test()
-        #result, message = self.kernel.start_test_by_path(path_exe, path_test, params, path_res, path_reference, cmp,
+        # result, message = self.kernel.start_test_by_path(path_exe, path_test, params, path_res, path_reference, cmp,
         #                                                 self.progressive_window.get_test_setter())
 
-        result, message = self.kernel.start_test_by_path(d[0], d[1], d[2], d[3], d[4], d[5])
+        progress_bar = ProgressWindow()
+        kernel_thread = KernelThread(d[0], d[1], d[2], d[3], d[4], d[5])
+        kernel_thread.complete_tests.connect(progress_bar.set_test_complete)
+        kernel_thread.all_tests.connect(progress_bar.set_number_of_tests)
+        kernel_thread.start()
+        progress_bar.show()
+
+        kernel_thread.wait()
+
+        progress_bar.close()
+
+        result, message = kernel_thread.result, kernel_thread.message
 
         if result is None:
             self.error_window.set_title("Error!")
@@ -539,12 +579,12 @@ import unittest
 
 def data_for_test():
     this_path = os.getcwd()
-    return [this_path + "\\test\\main.exe", # 0
-            this_path + "\\test\\test",     # 1
-            [1, 4],                         # 2
-            this_path + "\\test",           # 3
-            this_path + "\\test\\reference",# 4
-            this_path + "\\test\\comp.exe"] # 5
+    return [this_path + "\\test\\main.exe",  # 0
+            this_path + "\\test\\test",  # 1
+            [1, 4],  # 2
+            this_path + "\\test",  # 3
+            this_path + "\\test\\reference",  # 4
+            this_path + "\\test\\comp.exe"]  # 5
 
 
 class TestKernel(unittest.TestCase):
@@ -558,10 +598,10 @@ class TestKernel(unittest.TestCase):
     # corrects
 
     def test_error_window_title(self):
-       self.assertEqual("Error!", self.error_window.windowTitle())
+        self.assertEqual("Error!", self.error_window.windowTitle())
 
     def test_error_window_content(self):
-       self.assertEqual("Some errors!", self.error_window.error_text.text())
+        self.assertEqual("Some errors!", self.error_window.error_text.text())
 
     def test_correct_1(self):
         res, message = self.kernel.start_test_by_path(self.d[0], self.d[1], self.d[2], self.d[3], self.d[4], self.d[5])
@@ -644,17 +684,22 @@ class TestKernel(unittest.TestCase):
 
     def test_cmp_not_correct(self):
         res, message = self.kernel.start_test_by_path(self.d[0], self.d[1], self.d[2],
-                                                      self.d[3],  self.d[4], self.d[4])
+                                                      self.d[3], self.d[4], self.d[4])
         self.assertTrue(res is not None)
         self.assertEqual(message, 'path comparator\n')
 
 
 if __name__ == "__main__":
-    unittest.main()
+    # unittest.main()
     app = QApplication(sys.argv)
+    ex = ProgressWindow()
+    ex.show()
     print("5, 9")
-    time.sleep(10)
-    # ex.show()
+    for i in range(10):
+        ex.set_test_status(i, 9)
+        print(i)
+        # sys.exit(app.exec_())
+
     # ex.set_test_status(1, 9)
-    # sys.exit(app.exec_())
+    sys.exit(app.exec_())
     # ex = ProgressWindow()
