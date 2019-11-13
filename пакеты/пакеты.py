@@ -550,17 +550,18 @@ def data_for_test():
 class TestKernel(unittest.TestCase):
     kernel = Kernel()
     d = data_for_test()
-    #error_window = ErrorWindow()
-    #error_window.set_title("Error!")
-    #error_window.set_error("Some errors!")
+    app = QApplication(sys.argv)
+    error_window = ErrorWindow()
+    error_window.set_title("Error!")
+    error_window.set_error("Some errors!")
 
     # corrects
 
-    #def test_error_window_title(self):
-    #    self.assertEqual("Error!", self.error_window.windowTitle())
+    def test_error_window_title(self):
+       self.assertEqual("Error!", self.error_window.windowTitle())
 
-    #def test_error_window_content(self):
-    #    self.assertEqual("Some errors!", self.error_window.error_text.text())
+    def test_error_window_content(self):
+       self.assertEqual("Some errors!", self.error_window.error_text.text())
 
     def test_correct_1(self):
         res, message = self.kernel.start_test_by_path(self.d[0], self.d[1], self.d[2], self.d[3], self.d[4], self.d[5])
