@@ -178,7 +178,7 @@ class Kernel:
         is_valid &= t
 
         t = count_reference == count_test
-        if not t:
+        if is_valid and not t:
             message += 'quantity mismatch reference, test\n'
         is_valid &= t
 
@@ -354,9 +354,11 @@ class MainWindow(QWidget):
         path_res = self.path_result_path.text()
         # cmp = "C:\\Users\\Vladimir\\Desktop\\QA_practice\\пакеты\\test\\comp.exe"#self.path_comp_path.text()
         cmp = self.path_comp_path.text()
+        d = data_for_test()
+        #result, message = self.kernel.start_test_by_path(path_exe, path_test, params, path_res, path_reference, cmp,
+        #                                                 self.progressive_window.get_test_setter())
 
-        result, message = self.kernel.start_test_by_path(path_exe, path_test, params, path_res, path_reference, cmp,
-                                                         self.progressive_window.get_test_setter())
+        result, message = self.kernel.start_test_by_path(d[0], d[1], d[2], d[3], d[4], d[5])
 
         if result is None:
             self.error_window.set_title("Error!")
@@ -536,99 +538,99 @@ def data_for_test():
     this_path = os.getcwd()
     return [this_path + "\\test\\main.exe", # 0
             this_path + "\\test\\test",     # 1
-            [3, 4],                         # 2
+            [1, 4],                         # 2
             this_path + "\\test",           # 3
             this_path + "\\test\\reference",# 4
             this_path + "\\test\\comp.exe"] # 5
 
 
-class TestStringMethods(unittest.TestCase):
+class TestKernel(unittest.TestCase):
     kernel = Kernel()
     d = data_for_test()
 
 # corrects
 
-    def correct_1(self):
+    def test_correct_1(self):
         res, message = self.kernel.start_test_by_path(self.d[0], self.d[1], self.d[2], self.d[3], self.d[4], self.d[5])
-        self.assertEqual(res is not None)
+        self.assertTrue(res is not None)
         self.assertEqual(message, "")
 
-    def correct_2(self):
+    def test_correct_2(self):
         res, message = self.kernel.start_test_by_path(self.d[0], self.d[1] + '\\test1.txt', self.d[2],
                                                       self.d[3] + '\\res2.txt', self.d[4], self.d[5])
-        self.assertEqual(res is not None)
+        self.assertTrue(res is not None)
         self.assertEqual(message, "")
 
 # errors
 
-    def program_not_correct(self):
+    def test_program_not_correct(self):
         res, message = self.kernel.start_test_by_path('c:\\mIN.exe', self.d[0], self.d[1], self.d[2],
                                                       self.d[3], self.d[4], self.d[5])
-        self.assertEqual(res, None)
-        self.assertEqual(message, "path program" + '\n')
+        self.assertTrue(res is not None)
+        self.assertEqual(message, 'path program\n')
 
     def test_not_correct(self):
         res, message = self.kernel.start_test_by_path(self.d[0], 'c:\\main', self.d[2],
                                                       self.d[3], self.d[4], self.d[5])
-        self.assertEqual(res, None)
-        self.assertEqual(message, "path test" + '\n')
+        self.assertTrue(res is None)
+        self.assertEqual(message, 'path test\n')
 
     def test_include_dir(self):
         os.mkdir(self.d[1] + '\\temp')
         res, message = self.kernel.start_test_by_path(self.d[0], self.d[1], self.d[2],
                                                       self.d[3], self.d[4], self.d[5])
-        self.assertEqual(res, None)
+        self.assertTrue(res is None)
         self.assertEqual(message, "test include dir\n")
         os.rmdir(self.d[1] + '\\temp')
 
     def test_and_program_not_correct(self):
         res, message = self.kernel.start_test_by_path('c:\\mIN.exe', 'c:\\main', self.d[2],
                                                       self.d[3], self.d[4], self.d[5])
-        self.assertEqual(res, None)
+        self.assertTrue(res is None)
         self.assertEqual(message, 'path program\npath test\n')
 
-    def reference_not_correct(self):
+    def test_reference_not_correct(self):
         res, message = self.kernel.start_test_by_path(self.d[0], self.d[1], self.d[2],
                                                       'file_name', self.d[4], self.d[5])
-        self.assertEqual(res, None)
+        self.assertTrue(res is None)
         self.assertEqual(message, 'path reference\n')
 
-    def reference_include_dir(self):
+    def test_reference_include_dir(self):
         os.mkdir(self.d[3] + '\\temp')
         res, message = self.kernel.start_test_by_path(self.d[0], self.d[1], self.d[2],
                                                       self.d[3], self.d[4], self.d[5])
-        self.assertEqual(res, None)
+        self.assertTrue(res is None)
         self.assertEqual(message, 'reference include dir\n')
         os.rmdir(self.d[3] + '\\temp')
 
-    def mismatch_test_reference_1(self):
+    def test_mismatch_test_reference_1(self):
         res, message = self.kernel.start_test_by_path(self.d[0], self.d[1], self.d[2],
                                                       self.d[3] + '\\res1.txt', self.d[4], self.d[5])
-        self.assertEqual(res, None)
+        self.assertTrue(res is None)
         self.assertEqual(message, 'quantity mismatch reference, test\n')
 
-    def mismatch_test_reference_2(self):
+    def test_mismatch_test_reference_2(self):
         res, message = self.kernel.start_test_by_path(self.d[0], self.d[1] + '\\test1.txt', self.d[2],
                                                       self.d[3], self.d[4], self.d[5])
-        self.assertEqual(res, None)
+        self.assertTrue(res is None)
         self.assertEqual(message, 'quantity mismatch reference, test\n')
 
 # warnings
 
-    def result_not_correct(self):
+    def test_result_not_correct(self):
         res, message = self.kernel.start_test_by_path(self.d[0], self.d[1], self.d[2],
                                                       self.d[3], 'file_name', self.d[5])
-        self.assertEqual(res is not None)
+        self.assertTrue(res is not None)
         self.assertEqual(message, 'path result\n')
 
-    def cmp_not_correct(self):
+    def test_cmp_not_correct(self):
         res, message = self.kernel.start_test_by_path(self.d[0], self.d[1], self.d[2],
                                                       self.d[3],  self.d[4], self.d[4])
-        self.assertEqual(res is not None)
+        self.assertTrue(res is not None)
         self.assertEqual(message, 'path comparator\n')
 
 if __name__ == "__main__":
-    unittest.main()
+   # unittest.main()
     app = QApplication(sys.argv)
     ex = MainWindow()
     ex.show()
