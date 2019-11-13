@@ -10,7 +10,7 @@ from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import *
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
-
+from threading import Thread
 
 class Data:
     def get_time(self, mask): return self.matrix_time[mask]
@@ -651,6 +651,9 @@ class TestKernel(unittest.TestCase):
 if __name__ == "__main__":
     unittest.main()
     app = QApplication(sys.argv)
-    ex = MainWindow()
-    ex.show()
-    sys.exit(app.exec_())
+    print("5, 9")
+    time.sleep(10)
+    # ex.show()
+    # ex.set_test_status(1, 9)
+    # sys.exit(app.exec_())
+    # ex = ProgressWindow()
