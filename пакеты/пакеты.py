@@ -553,13 +553,13 @@ class TestKernel(unittest.TestCase):
 
     # corrects
 
-    def error_window_title(self):
+    def test_error_window_title(self):
         self.assertEqual("Error!", self.error_window.windowTitle())
 
-    def error_window_content(self):
+    def test_error_window_content(self):
         self.assertEqual("Some errors!", self.error_window.error_text.text())
 
-    def correct_1(self):
+    def test_correct_1(self):
         res, message = self.kernel.start_test_by_path(self.d[0], self.d[1], self.d[2], self.d[3], self.d[4], self.d[5])
         self.assertTrue(res is not None)
         self.assertEqual(message, "")
