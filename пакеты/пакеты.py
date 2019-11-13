@@ -547,10 +547,19 @@ def data_for_test():
 class TestKernel(unittest.TestCase):
     kernel = Kernel()
     d = data_for_test()
+    error_window = ErrorWindow()
+    error_window.set_title("Error!")
+    error_window.set_error("Some errors!")
 
-# corrects
+    # corrects
 
-    def test_correct_1(self):
+    def error_window_title(self):
+        self.assertEqual("Error!", self.error_window.windowTitle())
+
+    def error_window_content(self):
+        self.assertEqual("Some errors!", self.error_window.error_text.text())
+
+    def correct_1(self):
         res, message = self.kernel.start_test_by_path(self.d[0], self.d[1], self.d[2], self.d[3], self.d[4], self.d[5])
         self.assertTrue(res is not None)
         self.assertEqual(message, "")
@@ -561,7 +570,7 @@ class TestKernel(unittest.TestCase):
         self.assertTrue(res is not None)
         self.assertEqual(message, "")
 
-# errors
+    # errors
 
     def test_program_not_correct(self):
         res, message = self.kernel.start_test_by_path('c:\\mIN.exe', self.d[0], self.d[1], self.d[2],
@@ -615,7 +624,7 @@ class TestKernel(unittest.TestCase):
         self.assertTrue(res is None)
         self.assertEqual(message, 'quantity mismatch reference, test\n')
 
-# warnings
+    # warnings
 
     def test_result_not_correct(self):
         res, message = self.kernel.start_test_by_path(self.d[0], self.d[1], self.d[2],
@@ -628,6 +637,7 @@ class TestKernel(unittest.TestCase):
                                                       self.d[3],  self.d[4], self.d[4])
         self.assertTrue(res is not None)
         self.assertEqual(message, 'path comparator\n')
+
 
 if __name__ == "__main__":
    # unittest.main()
