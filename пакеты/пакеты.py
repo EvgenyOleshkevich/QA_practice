@@ -138,7 +138,8 @@ class Kernel:
         message = ""
 
         t = os.path.isfile(self.__program)
-        if not t: message += "path program\n"
+        if not t:
+            message += "path program\n"
         is_valid &= t
 
         t = os.path.exists(path_test)
@@ -158,7 +159,7 @@ class Kernel:
         is_valid &= t
 
         if not os.path.isdir(self.__output):
-            self.__output = os.getcwd() + "\\results"
+            self.__output = os.getcwd()
             message += "path result\n"
 
         count_reference = 0
@@ -188,7 +189,7 @@ class Kernel:
             message += "path comparator\n"
         return is_valid, message
 
-    def start_test_by_path(self, path_exe, path_test, params, path_res, path_reference, path_cmp, ):
+    def start_test_by_path(self, path_exe, path_test, params, path_res, path_reference, path_cmp):
         self.__program = path_exe
         self.params = [min(params), max(params)]
         self.__output = path_res
@@ -549,17 +550,17 @@ def data_for_test():
 class TestKernel(unittest.TestCase):
     kernel = Kernel()
     d = data_for_test()
-    error_window = ErrorWindow()
-    error_window.set_title("Error!")
-    error_window.set_error("Some errors!")
+    #error_window = ErrorWindow()
+    #error_window.set_title("Error!")
+    #error_window.set_error("Some errors!")
 
     # corrects
 
-    def test_error_window_title(self):
-        self.assertEqual("Error!", self.error_window.windowTitle())
+    #def test_error_window_title(self):
+    #    self.assertEqual("Error!", self.error_window.windowTitle())
 
-    def test_error_window_content(self):
-        self.assertEqual("Some errors!", self.error_window.error_text.text())
+    #def test_error_window_content(self):
+    #    self.assertEqual("Some errors!", self.error_window.error_text.text())
 
     def test_correct_1(self):
         res, message = self.kernel.start_test_by_path(self.d[0], self.d[1], self.d[2], self.d[3], self.d[4], self.d[5])
@@ -568,16 +569,22 @@ class TestKernel(unittest.TestCase):
 
     def test_correct_2(self):
         res, message = self.kernel.start_test_by_path(self.d[0], self.d[1] + '\\test1.txt', self.d[2],
-                                                      self.d[3] + '\\res2.txt', self.d[4], self.d[5])
+                                                      self.d[3], self.d[4] + '\\res2.txt', self.d[5])
+        self.assertTrue(res is not None)
+        self.assertEqual(message, "")
+
+    def test_correct_3(self):
+        res, message = self.kernel.start_test_by_path(self.d[0], self.d[1] + '2', self.d[2],
+                                                      self.d[3], self.d[4] + '\\res1.txt', self.d[5])
         self.assertTrue(res is not None)
         self.assertEqual(message, "")
 
     # errors
 
     def test_program_not_correct(self):
-        res, message = self.kernel.start_test_by_path('c:\\mIN.exe', self.d[0], self.d[1], self.d[2],
+        res, message = self.kernel.start_test_by_path('c:\\mIN.exe', self.d[1], self.d[2],
                                                       self.d[3], self.d[4], self.d[5])
-        self.assertTrue(res is not None)
+        self.assertTrue(res is None)
         self.assertEqual(message, 'path program\n')
 
     def test_not_correct(self):
@@ -602,21 +609,21 @@ class TestKernel(unittest.TestCase):
 
     def test_reference_not_correct(self):
         res, message = self.kernel.start_test_by_path(self.d[0], self.d[1], self.d[2],
-                                                      'file_name', self.d[4], self.d[5])
+                                                      self.d[3], 'file_name', self.d[5])
         self.assertTrue(res is None)
         self.assertEqual(message, 'path reference\n')
 
     def test_reference_include_dir(self):
-        os.mkdir(self.d[3] + '\\temp')
+        os.mkdir(self.d[4] + '\\temp')
         res, message = self.kernel.start_test_by_path(self.d[0], self.d[1], self.d[2],
                                                       self.d[3], self.d[4], self.d[5])
         self.assertTrue(res is None)
         self.assertEqual(message, 'reference include dir\n')
-        os.rmdir(self.d[3] + '\\temp')
+        os.rmdir(self.d[4] + '\\temp')
 
     def test_mismatch_test_reference_1(self):
         res, message = self.kernel.start_test_by_path(self.d[0], self.d[1], self.d[2],
-                                                      self.d[3] + '\\res1.txt', self.d[4], self.d[5])
+                                                      self.d[3], self.d[4] + '\\res1.txt', self.d[5])
         self.assertTrue(res is None)
         self.assertEqual(message, 'quantity mismatch reference, test\n')
 
@@ -630,7 +637,7 @@ class TestKernel(unittest.TestCase):
 
     def test_result_not_correct(self):
         res, message = self.kernel.start_test_by_path(self.d[0], self.d[1], self.d[2],
-                                                      self.d[3], 'file_name', self.d[5])
+                                                      'file_name', self.d[4], self.d[5])
         self.assertTrue(res is not None)
         self.assertEqual(message, 'path result\n')
 
