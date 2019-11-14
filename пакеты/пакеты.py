@@ -103,7 +103,7 @@ class Kernel:
             stat.write(test + '; ' + param + '; ' + (time_work[i]).__str__() + '\n')
         return time_work
 
-    def __start_tests(self, path_test, tests, path_reference, references):
+    def __start_tests(self, path_test, tests, path_reference, references, thread_link):
         self.__matrix_time = np.array([np.zeros(self.params[1] + 1 - self.params[0])])
         self.__matrix_is_complete = np.array([[False for i in range(self.params[1] + 1 - self.params[0])]])
         stat = open(self.__output + "statistic.csv", 'w')
@@ -117,6 +117,7 @@ class Kernel:
             a, b = self.__execute_test(test, res, reference, stat)
             self.__matrix_time = np.append(self.__matrix_time, [a], axis=0)
             self.__matrix_is_complete = np.append(self.__matrix_is_complete, [b], axis=0)
+            thread_link.complete_tests.emit(i + 1)
             # stat.write(tests[i] + "\n")
             # stat.write("time: " + self.__matrix_time[i + 1].__str__() + "\n")
             # stat.write("result: " + self.__matrix_is_complete[i + 1].__str__() + "\n")
@@ -125,13 +126,14 @@ class Kernel:
         # stat.write("all time: " + np.sum(self.__matrix_time, axis=0).__str__())
         stat.close()
 
-    def __start_tests_wo_ref(self, path_test, tests):
+    def __start_tests_wo_ref(self, path_test, tests, thread_link):
         self.__matrix_time = np.array([np.zeros(self.params[1] + 1 - self.params[0])])
         stat = open(self.__output + "statistic.csv", 'w')
         stat.write("test_name; param; time\n")
         for i in range(len(tests)):
             test = path_test + tests[i]
             self.__matrix_time = np.append(self.__matrix_time, [self.__execute_test_wo_ref(test, stat)], axis=0)
+            thread_link.complete_tests.emit(i + 1)
         self.__matrix_time = np.delete(self.__matrix_time, 0, axis=0)
         stat.close()
 
@@ -191,7 +193,7 @@ class Kernel:
             message += "path comparator\n"
         return is_valid, message
 
-    def start_test_by_path(self, path_exe, path_test, params, path_res, path_reference, path_cmp):
+    def start_test_by_path(self, path_exe, path_test, params, path_res, path_reference, path_cmp, thread_link):
         self.__program = path_exe
         self.params = [min(params), max(params)]
         self.__output = path_res
@@ -210,7 +212,8 @@ class Kernel:
         if path_reference == "":
             os.mkdir(self.__output)
             self.__output += "\\"
-            self.__start_tests_wo_ref(path_test, tests)
+            thread_link.all_tests.emit(len(tests))
+            self.__start_tests_wo_ref(path_test, tests, thread_link)
             return Data(self.__matrix_time, self.__matrix_is_complete, path_test + "statistic.txt", tests,
                         self.params), message
 
@@ -221,7 +224,8 @@ class Kernel:
 
         os.mkdir(self.__output)
         self.__output += "\\"
-        self.__start_tests(path_test, tests, path_reference, reference)
+        thread_link.all_tests.emit(len(tests))
+        self.__start_tests(path_test, tests, path_reference, reference, thread_link)
         return Data(self.__matrix_time, self.__matrix_is_complete, path_test + "statistic.txt", tests,
                     self.params), message
 
@@ -237,14 +241,16 @@ class KernelThread(QThread):
         self.path_res = path_res
         self.path_reference = path_reference
         self.path_cmp = path_cmp
+        self.thread_link = self
 
     complete_tests = pyqtSignal(int)
     all_tests = pyqtSignal(int)
 
+
     def run(self):
-        self.result, self.message = kernel.start_test_by_path(self.path_exe, self.path_test, self.params, self.path_res,
+        self.result, self.message = self.kernel.start_test_by_path(self.path_exe, self.path_test, self.params, self.path_res,
                                                               self.path_reference,
-                                                              self.path_cmp)
+                                                              self.path_cmp, self.thread_link)
 
 
 # Next code is UI
@@ -254,12 +260,11 @@ class ProgressWindow(QWidget):
 
     def __init__(self):
         super().__init__()
-        self.timer.start(1000, self)
         self.complete = 0
         self.main_vertical_layout = QVBoxLayout()
         self.progress_bar = QProgressBar(self)
-        self.number_of_tests = number_of_tests
-        self.progress_bar.setMaximum(number_of_tests)
+        self.number_of_tests = 1
+        self.progress_bar.setMaximum(self.number_of_tests)
         self.progress_label = QLabel("Сделано столько то тестов")
         self.main_vertical_layout.addWidget(self.progress_label)
         self.main_vertical_layout.addWidget(self.progress_bar)
@@ -399,9 +404,9 @@ class MainWindow(QWidget):
 
         kernel_thread.wait()
 
-        progress_bar.close()
-
         result, message = kernel_thread.result, kernel_thread.message
+
+        progress_bar.close()
 
         if result is None:
             self.error_window.set_title("Error!")
@@ -692,14 +697,6 @@ class TestKernel(unittest.TestCase):
 if __name__ == "__main__":
     # unittest.main()
     app = QApplication(sys.argv)
-    ex = ProgressWindow()
+    ex = MainWindow()
     ex.show()
-    print("5, 9")
-    for i in range(10):
-        ex.set_test_status(i, 9)
-        print(i)
-        # sys.exit(app.exec_())
-
-    # ex.set_test_status(1, 9)
     sys.exit(app.exec_())
-    # ex = ProgressWindow()
