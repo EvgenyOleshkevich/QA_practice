@@ -2,11 +2,10 @@
 #include <fstream>
 #include <ctime>
 
-int main()
+int main(uint32_t argc, const char* argv[])
 {
+	size_t size = std::atoi(argv[1]);
 	srand(time(0));
-	size_t size = 0;
-	std::cin >> size;
 	std::ofstream outFile("test.txt");
 	outFile << size << std::endl;
 	for (size_t i = 0; i < size; ++i)

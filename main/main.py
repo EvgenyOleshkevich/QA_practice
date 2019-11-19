@@ -12,6 +12,9 @@ from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 from threading import Thread
 
+slash = '/'
+#slash = '\\'
+
 class Data:
     def get_time(self, mask): return self.matrix_time[mask]
 
@@ -82,7 +85,7 @@ class Kernel:
         is_complete = np.array([False for i in range(self.params[1] + 1 - self.params[0])])
         for i in range(int(self.params[1] + 1 - self.params[0])):
             param = (i + self.params[0]).__str__()
-            res = res_i + "\\" + param + ".txt"
+            res = res_i + slash + param + ".txt"
             timer = time.clock()
             # subprocess.check_call([__program, param, test, res]) with exception
             subprocess.call([self.__program, param, test, res])  # without exception
@@ -152,7 +155,7 @@ class Kernel:
                 listdir = os.listdir(path_test)
                 count_test = len(listdir)
                 for file_name in listdir:
-                    if os.path.isdir(path_test + '\\' + file_name):
+                    if os.path.isdir(path_test + slash + file_name):
                         t = False
                         message += 'test include dir\n'
                         break
@@ -172,7 +175,7 @@ class Kernel:
                 listdir = os.listdir(path_reference)
                 count_reference = len(listdir)
                 for file_name in listdir:
-                    if os.path.isdir(path_reference + '\\' + file_name):
+                    if os.path.isdir(path_reference + slash + file_name):
                         t = False
                         message += 'reference include dir\n'
                         break
@@ -196,18 +199,18 @@ class Kernel:
         is_valid, message = self.__validation(path_test, path_reference, path_cmp)
         if not is_valid:
             return None, message
-        self.__output += '\\results'
+        self.__output += slash + 'results'
         if os.path.isdir(self.__output):
             shutil.rmtree(self.__output)
 
         tests = np.array([""])
         if os.path.isdir(path_test):  # check path_test is fold or file
             tests = np.array(os.listdir(path_test))
-            path_test += "\\"
+            path_test += slash
 
         if path_reference == "":
             os.mkdir(self.__output)
-            self.__output += "\\"
+            self.__output += slash
             self.__start_tests_wo_ref(path_test, tests)
             return Data(self.__matrix_time, self.__matrix_is_complete, path_test + "statistic.txt", tests,
                         self.params), message
@@ -215,10 +218,10 @@ class Kernel:
         reference = np.array([""])
         if os.path.isdir(path_reference):  # check path_reference is    fold or file
             reference = np.array(os.listdir(path_reference))
-            path_reference += "\\"
+            path_reference += slash
 
         os.mkdir(self.__output)
-        self.__output += "\\"
+        self.__output += slash
         self.__start_tests(path_test, tests, path_reference, reference)
         return Data(self.__matrix_time, self.__matrix_is_complete, path_test + "statistic.txt", tests,
                     self.params), message
@@ -346,16 +349,12 @@ class MainWindow(QWidget):
 
     def on_calc_click(self):
         path_exe = self.test_scenario_path.text()
-        # path_exe = "C:\\Users\\Vladimir\\Desktop\\QA_practice\\пакеты\\test\\main.exe"
         path_test = self.path_tests_path.text()
-        # path_test = "C:\\Users\\Vladimir\\Desktop\\QA_practice\\пакеты\\test\\test"
         # params =  [2, 4]
         params = [int(self.test_params_value_min.text()), int(self.test_params_value_max.text())]
 
-        # path_reference = "C:\\Users\\Vladimir\\Desktop\\QA_practice\\пакеты\\test\\reference"
         path_reference = self.path_answers_path.text()
         path_res = self.path_result_path.text()
-        # cmp = "C:\\Users\\Vladimir\\Desktop\\QA_practice\\пакеты\\test\\comp.exe"#self.path_comp_path.text()
         cmp = self.path_comp_path.text()
         d = data_for_test()
         #result, message = self.kernel.start_test_by_path(path_exe, path_test, params, path_res, path_reference, cmp,
@@ -539,12 +538,12 @@ import unittest
 
 def data_for_test():
     this_path = os.getcwd()
-    return [this_path + "\\test\\main.exe", # 0
-            this_path + "\\test\\test",     # 1
+    return [this_path + slash + 'test' + slash + 'main.exe', # 0
+            this_path + slash + 'test' + slash + 'test',     # 1
             [1, 4],                         # 2
-            this_path + "\\test",           # 3
-            this_path + "\\test\\reference",# 4
-            this_path + "\\test\\comp.exe"] # 5
+            this_path + slash + 'test',           # 3
+            this_path + slash + 'test' + slash + 'reference',# 4
+            this_path + slash + 'test' + slash + 'comp.exe'] # 5
 
 
 class TestKernel(unittest.TestCase):
@@ -569,14 +568,14 @@ class TestKernel(unittest.TestCase):
         self.assertEqual(message, "")
 
     def test_correct_2(self):
-        res, message = self.kernel.start_test_by_path(self.d[0], self.d[1] + '\\test1.txt', self.d[2],
-                                                      self.d[3], self.d[4] + '\\res2.txt', self.d[5])
+        res, message = self.kernel.start_test_by_path(self.d[0], self.d[1] + slash + 'test1.txt', self.d[2],
+                                                      self.d[3], self.d[4] + slash + 'res2.txt', self.d[5])
         self.assertTrue(res is not None)
         self.assertEqual(message, "")
 
     def test_correct_3(self):
         res, message = self.kernel.start_test_by_path(self.d[0], self.d[1] + '2', self.d[2],
-                                                      self.d[3], self.d[4] + '\\res1.txt', self.d[5])
+                                                      self.d[3], self.d[4] + slash + 'res1.txt', self.d[5])
         self.assertTrue(res is not None)
         self.assertEqual(message, "")
 
@@ -615,21 +614,21 @@ class TestKernel(unittest.TestCase):
         self.assertEqual(message, 'path reference\n')
 
     def test_reference_include_dir(self):
-        os.mkdir(self.d[4] + '\\temp')
+        os.mkdir(self.d[4] + slash + 'temp')
         res, message = self.kernel.start_test_by_path(self.d[0], self.d[1], self.d[2],
                                                       self.d[3], self.d[4], self.d[5])
         self.assertTrue(res is None)
         self.assertEqual(message, 'reference include dir\n')
-        os.rmdir(self.d[4] + '\\temp')
+        os.rmdir(self.d[4] + slash + 'temp')
 
     def test_mismatch_test_reference_1(self):
         res, message = self.kernel.start_test_by_path(self.d[0], self.d[1], self.d[2],
-                                                      self.d[3], self.d[4] + '\\res1.txt', self.d[5])
+                                                      self.d[3], self.d[4] + slash + 'res1.txt', self.d[5])
         self.assertTrue(res is None)
         self.assertEqual(message, 'quantity mismatch reference, test\n')
 
     def test_mismatch_test_reference_2(self):
-        res, message = self.kernel.start_test_by_path(self.d[0], self.d[1] + '\\test1.txt', self.d[2],
+        res, message = self.kernel.start_test_by_path(self.d[0], self.d[1] + slash + 'test1.txt', self.d[2],
                                                       self.d[3], self.d[4], self.d[5])
         self.assertTrue(res is None)
         self.assertEqual(message, 'quantity mismatch reference, test\n')
@@ -650,11 +649,12 @@ class TestKernel(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    unittest.main()
+    #unittest.main()
     app = QApplication(sys.argv)
     print("5, 9")
-    time.sleep(10)
-    # ex.show()
-    # ex.set_test_status(1, 9)
-    # sys.exit(app.exec_())
-    # ex = ProgressWindow()
+    #time.sleep(10)
+    ex = MainWindow()
+    ex.show()
+    #ex.set_test_status(1, 9)
+    sys.exit(app.exec_())
+    #ex = ProgressWindow()
