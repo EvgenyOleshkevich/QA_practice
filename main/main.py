@@ -543,7 +543,7 @@ def data_for_test():
             [1, 4],                         # 2
             this_path + slash + 'test',           # 3
             this_path + slash + 'test' + slash + 'reference',# 4
-            this_path + slash + 'test' + slash + 'comp.exe'] # 5
+            this_path + slash + 'test' + slash + 'co.xe'] # 5
 
 
 class TestKernel(unittest.TestCase):

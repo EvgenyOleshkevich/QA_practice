@@ -83,7 +83,7 @@ void SortHeap(int arr[], size_t length)
 
 
 
-int main(uint32_t argc, const char* argv[])
+int main(int argc, const char* argv[])
 {
 	int type = std::atoi(argv[1]);
 	setlocale(LC_ALL,"Rus");
