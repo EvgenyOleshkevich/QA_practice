@@ -325,6 +325,7 @@ class MainWindow(QWidget):
 
         self.setLayout(main_horizontal_layout)
         self.setGeometry(300, 200, 1280, 720)
+        self.showFullScreen()
         self.setWindowTitle('QLineEdit')
 
     def on_value_changed_min(self):
@@ -403,6 +404,12 @@ class ResultWindow(QWidget):
         self.scroll.setWidget(group_box)
         self.scroll.setWidgetResizable(True)
 
+        self.left_vertical_layout = QVBoxLayout
+        self.left_vertical_layout.addWidget(self.scroll)
+        self.sum_check_box = QCheckBox("Display result Sum")
+        self.sum_check_box.stateChanged.connect(self.on_sum_show_change)
+        self.left_vertical_layout.addWidget(self.sum_check_box)
+
         self.curve_status_show = [True for i in range(len(result_data))]
 
         self.test_names = [test[0].name for test in result_data]
@@ -411,11 +418,26 @@ class ResultWindow(QWidget):
                                        test_names=self.test_names)
         self.main_horizontal_layout = QHBoxLayout()
         self.main_horizontal_layout.setAlignment(Qt.AlignRight)
-        self.main_horizontal_layout.addWidget(self.scroll)
+        self.main_horizontal_layout.addLayout(self.left_vertical_layout)
         self.main_horizontal_layout.addWidget(self.result_graph)
         self.main_horizontal_layout.setAlignment(Qt.AlignLeft)
 
         self.setLayout(self.main_horizontal_layout)
+
+    def on_sum_show_change(self):
+        if not (self.sum_check_box.checkState() == Qt.Checked):
+            self.main_horizontal_layout.removeWidget(self.result_graph)
+            self.result_graph.resize(0, 0)
+            self.result_graph = PlotCanvas(width=8, height=8, curve_status_show=self.curve_status_show,
+                                           data=self.result,
+                                           test_names=self.test_names)
+            self.main_horizontal_layout.addWidget(self.result_graph)
+        else:
+            self.main_horizontal_layout.removeWidget(self.result_graph)
+            self.result_graph.resize(0, 0)
+            self.result_graph = PlotCanvas(width=8, height=8, curve_status_show=[True], data=self.result_sum,
+                                           test_names=["Result's sum"])
+            self.main_horizontal_layout.addWidget(self.result_graph)
 
     def on_curve_show_change(self, number_of_curve, status):
         self.curve_status_show[number_of_curve] = status
