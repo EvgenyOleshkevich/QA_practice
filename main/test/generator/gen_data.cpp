@@ -2,14 +2,27 @@
 #include <fstream>
 #include <ctime>
 
-int main(uint32_t argc, const char* argv[])
+int main(int argc, const char* argv[])
 {
-	size_t size = std::atoi(argv[1]);
+	int size = std::atoi(argv[1]);
 	srand(time(0));
-	std::ofstream outFile("test.txt");
-	outFile << size << std::endl;
-	for (size_t i = 0; i < size; ++i)
-		outFile << rand() % 100 << " ";
+	std::ofstream test(argv[2]);
+	test << size << std::endl;
+	int* arr = new int[size];
+	for (int i = 0; i < size; ++i)
+	{
+		arr[i] = rand() % 1000;
+		test << arr[i];
+	}
 	outFile.close();
+	
+	std::sort(arr, arr + size, [](int a, int b)
+				{
+					return a < b;
+				});
+	std::ofstream res(argv[3]);
+	for (int i = 0; i < size; ++i)
+		res << arr[i];
+	res.close();
 	return 0;
 }

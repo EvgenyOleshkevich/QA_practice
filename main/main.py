@@ -86,11 +86,20 @@ class Kernel:
         for i in range(int(self.params[1] + 1 - self.params[0])):
             param = (i + self.params[0]).__str__()
             res = res_i + slash + param + ".txt"
-            timer = time.clock()
+            timer = time.perf_counter()
+            print(timer)
             # subprocess.check_call([__program, param, test, res]) with exception
             #subprocess.call([self.__program, param, test, res])  # without exception
             qqq = subprocess.check_output([self.__program, param, test, res, 'o.txt']).__str__()
-            time_work[i] = time.clock() - timer
+            f = 0
+            print(os.path.isfile('o.txt'))
+            while not os.path.isfile('o.txt'):
+                print(f)
+                f += 1
+            print(time.perf_counter())
+            time_work[i] = time.perf_counter() - timer
+            os.remove('o.txt')
+            print(qqq)
             is_complete[i] = self.__cmp(res, reference)
             stat.write(test + '; ' + param + '; ' + (time_work[i]).__str__() + '; ' + (is_complete[i]).__str__() + '\n')
         return [time_work, is_complete]
@@ -99,9 +108,9 @@ class Kernel:
         time_work = -1 * np.ones(int(self.params[1] + 1 - self.params[0]))
         for i in range(int(self.params[1] + 1 - self.params[0])):
             param = (i + self.params[0]).__str__()
-            timer = time.clock()
+            timer = time.process_time()
             subprocess.call([self.__program, param, test])
-            time_work[i] = time.clock() - timer
+            time_work[i] = time.process_time() - timer
             stat.write(test + '; ' + param + '; ' + (time_work[i]).__str__() + '\n')
         return time_work
 
@@ -678,6 +687,7 @@ if __name__ == "__main__":
     print("5, 9")
     #time.sleep(10)
     ex = MainWindow()
+    ex.on_calc_click()
     ex.show()
     #ex.set_test_status(1, 9)
     sys.exit(app.exec_())
