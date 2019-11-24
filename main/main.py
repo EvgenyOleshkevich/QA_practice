@@ -12,8 +12,8 @@ from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 from threading import Thread
 
-slash = '/' # linux
-#slash = '\\' # windows
+#slash = '/' # linux
+slash = '\\' # windows
 
 class Data:
     def get_time(self, mask): return self.matrix_time[mask]
@@ -66,9 +66,7 @@ class Kernel:
         def func(path1, path2):
             if not os.path.isfile(path1) or not os.path.isfile(path1):
                 return False
-            # y = subprocess.call([path, path1, path2])
-            # y = subprocess.Popen([path, path1, path2])
-            return subprocess.check_output([path, path1, path2]).__str__() == 'b\'True\''
+            return subprocess.check_output([path, path1, path2]).__str__() == 'b\'1\''
 
         return func
 
@@ -86,20 +84,13 @@ class Kernel:
         for i in range(int(self.params[1] + 1 - self.params[0])):
             param = (i + self.params[0]).__str__()
             res = res_i + slash + param + ".txt"
-            timer = time.perf_counter()
-            print(timer)
+            timer = time.time()
+            #print(timer)
             # subprocess.check_call([__program, param, test, res]) with exception
             #subprocess.call([self.__program, param, test, res])  # without exception
-            qqq = subprocess.check_output([self.__program, param, test, res, 'o.txt']).__str__()
-            f = 0
-            print(os.path.isfile('o.txt'))
-            while not os.path.isfile('o.txt'):
-                print(f)
-                f += 1
-            print(time.perf_counter())
-            time_work[i] = time.perf_counter() - timer
-            os.remove('o.txt')
-            print(qqq)
+            qqq = subprocess.check_output([self.__program, param, test, res]).__str__()
+            #print(time.time())
+            time_work[i] = time.time() - timer
             is_complete[i] = self.__cmp(res, reference)
             stat.write(test + '; ' + param + '; ' + (time_work[i]).__str__() + '; ' + (is_complete[i]).__str__() + '\n')
         return [time_work, is_complete]
@@ -108,9 +99,9 @@ class Kernel:
         time_work = -1 * np.ones(int(self.params[1] + 1 - self.params[0]))
         for i in range(int(self.params[1] + 1 - self.params[0])):
             param = (i + self.params[0]).__str__()
-            timer = time.process_time()
-            subprocess.call([self.__program, param, test])
-            time_work[i] = time.process_time() - timer
+            timer = time.time()
+            qqq = subprocess.check_output([self.__program, param, test]).__str__()
+            time_work[i] = time.time() - timer
             stat.write(test + '; ' + param + '; ' + (time_work[i]).__str__() + '\n')
         return time_work
 
@@ -246,7 +237,7 @@ class ProgressWindow(QWidget):
         super().__init__()
         self.main_vertical_layout = QVBoxLayout()
         self.progress_bar = QProgressBar(self)
-        self.progress_label = QLabel("Сделано столько то тестов")
+        self.progress_label = QLabel("РЎРґРµР»Р°РЅРѕ СЃС‚РѕР»СЊРєРѕ С‚Рѕ С‚РµСЃС‚РѕРІ")
         self.main_vertical_layout.addWidget(self.progress_label)
         self.main_vertical_layout.addWidget(self.progress_bar)
         self.setLayout(self.main_vertical_layout)
@@ -571,12 +562,12 @@ import unittest
 
 def data_for_test():
     this_path = os.getcwd()
-    return [this_path + slash + 'test' + slash + 'main_l.exe', # 0
+    return [this_path + slash + 'test' + slash + 'main.exe', # 0
             this_path + slash + 'test' + slash + 'test',     # 1
             [1, 4],                         # 2
             this_path + slash + 'test',           # 3
             this_path + slash + 'test' + slash + 'reference',# 4
-            this_path + slash + 'test' + slash + 'co.xe'] # 5
+            this_path + slash + 'test' + slash + 'cmp.exe'] # 5
 
 
 class TestKernel(unittest.TestCase):
