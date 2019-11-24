@@ -406,7 +406,7 @@ class ResultWindow(QWidget):
         self.scroll.setWidget(group_box)
         self.scroll.setWidgetResizable(True)
 
-        self.left_vertical_layout = QVBoxLayout
+        self.left_vertical_layout = QVBoxLayout()
         self.left_vertical_layout.addWidget(self.scroll)
         self.sum_check_box = QCheckBox("Display result Sum")
         self.sum_check_box.stateChanged.connect(self.on_sum_show_change)
