@@ -12,8 +12,9 @@ from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 from threading import Thread
 
-#slash = '/' # linux
-slash = '\\' # windows
+# slash = '/' # linux
+slash = '\\'  # windows
+
 
 class Data:
     def get_time(self, mask): return self.matrix_time[mask]
@@ -85,11 +86,11 @@ class Kernel:
             param = (i + self.params[0]).__str__()
             res = res_i + slash + param + ".txt"
             timer = time.time()
-            #print(timer)
+            # print(timer)
             # subprocess.check_call([__program, param, test, res]) with exception
-            #subprocess.call([self.__program, param, test, res])  # without exception
+            # subprocess.call([self.__program, param, test, res])  # without exception
             qqq = subprocess.check_output([self.__program, param, test, res]).__str__()
-            #print(time.time())
+            # print(time.time())
             time_work[i] = time.time() - timer
             is_complete[i] = self.__cmp(res, reference)
             stat.write(test + '; ' + param + '; ' + (time_work[i]).__str__() + '; ' + (is_complete[i]).__str__() + '\n')
@@ -359,7 +360,7 @@ class MainWindow(QWidget):
         path_res = self.path_result_path.text()
         cmp = self.path_comp_path.text()
         d = data_for_test()
-        #result, message = self.kernel.start_test_by_path(path_exe, path_test, params, path_res, path_reference, cmp,
+        # result, message = self.kernel.start_test_by_path(path_exe, path_test, params, path_res, path_reference, cmp,
         #                                                 self.progressive_window.get_test_setter())
 
         result, message = self.kernel.start_test_by_path(d[0], d[1], d[2], d[3], d[4], d[5])
@@ -427,21 +428,22 @@ class ResultWindow(QWidget):
         self.setLayout(self.main_horizontal_layout)
 
     def on_sum_show_change(self):
-        if not (self.sum_check_box.checkState() == Qt.Checked):
+        if not (not self.sum_check_box.checkState() == Qt.Checked):
             self.main_horizontal_layout.removeWidget(self.result_graph)
             self.result_graph.resize(0, 0)
-            self.result_graph = PlotCanvas(width=8, height=8, curve_status_show=self.curve_status_show,
-                                           data=self.result,
-                                           test_names=self.test_names)
+            self.result_graph = PlotCanvasSum(width=8, height=8, curve_status_show=self.curve_status_show,
+                                              data=self.result,
+                                              test_names=self.test_names)
             self.main_horizontal_layout.addWidget(self.result_graph)
         else:
             self.main_horizontal_layout.removeWidget(self.result_graph)
             self.result_graph.resize(0, 0)
-            self.result_graph = PlotCanvas(width=8, height=8, curve_status_show=[True], data=self.result_sum,
-                                           test_names=["Result's sum"])
+            self.result_graph = PlotCanvas(width=8, height=8, curve_status_show=self.curve_status_show, data=self.result,
+                                       test_names=self.test_names)
             self.main_horizontal_layout.addWidget(self.result_graph)
 
     def on_curve_show_change(self, number_of_curve, status):
+        self.sum_check_box.setChecked(False)
         self.curve_status_show[number_of_curve] = status
         self.main_horizontal_layout.removeWidget(self.result_graph)
         self.result_graph.resize(0, 0)
@@ -480,6 +482,34 @@ class ResultWindow(QWidget):
         item_layout.addLayout(sub_items_layout)
         item_layout.addStretch(0)
         return item_layout
+
+
+class PlotCanvasSum(FigureCanvas):
+    def __init__(self, width=7, height=7, dpi=80, data=None, curve_status_show=None, test_names=[]):
+        if curve_status_show is None:
+            curve_status_show = []
+        fig = Figure(figsize=(width, height), dpi=dpi)
+        FigureCanvas.__init__(self, fig)
+
+        self.plot(data, curve_status_show)
+        self.draw()
+
+    def plot(self, data_list, curve_status_show):
+        ax = self.figure.add_subplot(111)
+        sum_y = np.zeros_like(data_list[0])
+        x = np.array([current_test.param_value for current_test in data_list[-1]])
+        for test in range(len(data_list)):
+            if curve_status_show[test]:
+                y = np.array([current_test.time for current_test in data_list[test]])
+                sum_y += y
+        ax.plot(x, sum_y, label="Test: Result sum")
+        ax.scatter(x=x, y=sum_y, color="red")
+
+        ax.legend()
+        ax.set_ylabel("Execution time")
+        ax.set_xlabel("Param value")
+        ax.grid()
+        ax.set_title("Tasks Graph")
 
 
 class PlotCanvas(FigureCanvas):
@@ -562,12 +592,12 @@ import unittest
 
 def data_for_test():
     this_path = os.getcwd()
-    return [this_path + slash + 'test' + slash + 'main.exe', # 0
-            this_path + slash + 'test' + slash + 'test',     # 1
-            [1, 4],                         # 2
-            this_path + slash + 'test',           # 3
-            this_path + slash + 'test' + slash + 'reference',# 4
-            this_path + slash + 'test' + slash + 'cmp.exe'] # 5
+    return [this_path + slash + 'test' + slash + 'main.exe',  # 0
+            this_path + slash + 'test' + slash + 'test',  # 1
+            [1, 4],  # 2
+            this_path + slash + 'test',  # 3
+            this_path + slash + 'test' + slash + 'reference',  # 4
+            this_path + slash + 'test' + slash + 'cmp.exe']  # 5
 
 
 class TestKernel(unittest.TestCase):
@@ -581,10 +611,10 @@ class TestKernel(unittest.TestCase):
     # corrects
 
     def test_error_window_title(self):
-       self.assertEqual("Error!", self.error_window.windowTitle())
+        self.assertEqual("Error!", self.error_window.windowTitle())
 
     def test_error_window_content(self):
-       self.assertEqual("Some errors!", self.error_window.error_text.text())
+        self.assertEqual("Some errors!", self.error_window.error_text.text())
 
     def test_correct_1(self):
         res, message = self.kernel.start_test_by_path(self.d[0], self.d[1], self.d[2], self.d[3], self.d[4], self.d[5])
@@ -667,19 +697,19 @@ class TestKernel(unittest.TestCase):
 
     def test_cmp_not_correct(self):
         res, message = self.kernel.start_test_by_path(self.d[0], self.d[1], self.d[2],
-                                                      self.d[3],  self.d[4], self.d[4])
+                                                      self.d[3], self.d[4], self.d[4])
         self.assertTrue(res is not None)
         self.assertEqual(message, 'path comparator\n')
 
 
 if __name__ == "__main__":
-    #unittest.main()
+    # unittest.main()
     app = QApplication(sys.argv)
     print("5, 9")
-    #time.sleep(10)
+    # time.sleep(10)
     ex = MainWindow()
     ex.on_calc_click()
     ex.show()
-    #ex.set_test_status(1, 9)
+    # ex.set_test_status(1, 9)
     sys.exit(app.exec_())
-    #ex = ProgressWindow()
+    # ex = ProgressWindow()
