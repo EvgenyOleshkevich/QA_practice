@@ -131,5 +131,9 @@ int main(int argc, const char* argv[])
 		outFile << arr[i] << " ";
 	}
 	outFile.close();
+	std::ofstream endFile(argv[4]);
+	endFile << "ok";
+	endFile.close();
+	std::cout << "ok";
 	return 0;
 }

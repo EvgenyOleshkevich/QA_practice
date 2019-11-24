@@ -1,5 +1,0 @@
-test_name; param; time; result
-C:\Users\Vladimir\Desktop\QA_practice\пакеты\test\test2\test1.txt; 1; 0.3743583999999993; False
-C:\Users\Vladimir\Desktop\QA_practice\пакеты\test\test2\test1.txt; 2; 0.21858749999999993; False
-C:\Users\Vladimir\Desktop\QA_practice\пакеты\test\test2\test1.txt; 3; 0.2222748000000001; True
-C:\Users\Vladimir\Desktop\QA_practice\пакеты\test\test2\test1.txt; 4; 0.10068869999999919; True

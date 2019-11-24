@@ -12,8 +12,8 @@ from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 from threading import Thread
 
-slash = '/'
-#slash = '\\'
+slash = '/' # linux
+#slash = '\\' # windows
 
 class Data:
     def get_time(self, mask): return self.matrix_time[mask]
@@ -88,7 +88,8 @@ class Kernel:
             res = res_i + slash + param + ".txt"
             timer = time.clock()
             # subprocess.check_call([__program, param, test, res]) with exception
-            subprocess.call([self.__program, param, test, res])  # without exception
+            #subprocess.call([self.__program, param, test, res])  # without exception
+            qqq = subprocess.check_output([self.__program, param, test, res, 'o.txt']).__str__()
             time_work[i] = time.clock() - timer
             is_complete[i] = self.__cmp(res, reference)
             stat.write(test + '; ' + param + '; ' + (time_work[i]).__str__() + '; ' + (is_complete[i]).__str__() + '\n')
@@ -368,6 +369,7 @@ class MainWindow(QWidget):
             self.error_window.set_error(message)
             self.error_window.show()
         else:
+            print(result.get_time([True for i in range(result.get_tests_count())]))
             self.mask = [True for i in range(result.get_tests_count())]
             test_info = get_configuration_list(result, self.mask)
             self.result = ResultWindow(test_info)
@@ -560,7 +562,7 @@ import unittest
 
 def data_for_test():
     this_path = os.getcwd()
-    return [this_path + slash + 'test' + slash + 'main.exe', # 0
+    return [this_path + slash + 'test' + slash + 'main_l.exe', # 0
             this_path + slash + 'test' + slash + 'test',     # 1
             [1, 4],                         # 2
             this_path + slash + 'test',           # 3
