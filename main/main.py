@@ -15,7 +15,7 @@ from threading import Thread
 # slash = '/' # linux
 slash = '\\'  # windows
 
-
+#'b\'1\\r\\n\''
 class Data:
     def get_time(self, mask): return self.matrix_time[mask]
 
@@ -71,6 +71,15 @@ class Kernel:
 
         return func
 
+    @staticmethod
+    def __is_equal_file_user_py(path):
+        def func(path1, path2):
+            if not os.path.isfile(path1) or not os.path.isfile(path1):
+                return False
+            return subprocess.check_output(['python', path, path1, path2]).__str__() == 'b\'1\\r\\n\''
+
+        return func
+
     def __init__(self):
         self.__program = ""
         self.__output = ""
@@ -78,20 +87,20 @@ class Kernel:
         self.__matrix_time = np.array([])
         self.__matrix_is_complete = np.array([])
         self.__cmp = self.__is_equal_file_default
+        self.__template_call = ''
 
-    def __execute_test(self, test, res_i, reference, stat):
+    def __execute_test(self, string_call, test, res_i, reference, stat):
         time_work = -1 * np.ones(int(self.params[1] + 1 - self.params[0]))
         is_complete = np.array([False for i in range(self.params[1] + 1 - self.params[0])])
         for i in range(int(self.params[1] + 1 - self.params[0])):
             param = (i + self.params[0]).__str__()
-            res = res_i + slash + param + ".txt"
+            res = res_i + slash + param + '.txt'
+            call = string_call.replace('$pathout', res).replace('$paramvalue', param).split()
+
             timer = time.time()
-            # print(timer)
-            # subprocess.check_call([__program, param, test, res]) with exception
-            # subprocess.call([self.__program, param, test, res])  # without exception
-            qqq = subprocess.check_output([self.__program, param, test, res]).__str__()
-            # print(time.time())
+            subprocess.check_output(call).__str__()
             time_work[i] = time.time() - timer
+
             is_complete[i] = self.__cmp(res, reference)
             stat.write(test + '; ' + param + '; ' + (time_work[i]).__str__() + '; ' + (is_complete[i]).__str__() + '\n')
         return [time_work, is_complete]
@@ -101,7 +110,7 @@ class Kernel:
         for i in range(int(self.params[1] + 1 - self.params[0])):
             param = (i + self.params[0]).__str__()
             timer = time.time()
-            qqq = subprocess.check_output([self.__program, param, test]).__str__()
+            subprocess.check_output([self.__program, param, test]).__str__()
             time_work[i] = time.time() - timer
             stat.write(test + '; ' + param + '; ' + (time_work[i]).__str__() + '\n')
         return time_work
@@ -110,22 +119,19 @@ class Kernel:
         self.__matrix_time = np.array([np.zeros(self.params[1] + 1 - self.params[0])])
         self.__matrix_is_complete = np.array([[False for i in range(self.params[1] + 1 - self.params[0])]])
         stat = open(self.__output + "statistic.csv", 'w')
-        # stat.write(self.params.__str__() + "\n")
+
         stat.write("test_name; param; time; result\n")
         for i in range(len(tests)):
             test = path_test + tests[i]
             reference = path_reference + references[i]
             res = self.__output + i.__str__()
             os.mkdir(res)
-            a, b = self.__execute_test(test, res, reference, stat)
+            a, b = self.__execute_test(self.__template_call.replace('$pathin', test), test, res, reference, stat)
             self.__matrix_time = np.append(self.__matrix_time, [a], axis=0)
             self.__matrix_is_complete = np.append(self.__matrix_is_complete, [b], axis=0)
-            # stat.write(tests[i] + "\n")
-            # stat.write("time: " + self.__matrix_time[i + 1].__str__() + "\n")
-            # stat.write("result: " + self.__matrix_is_complete[i + 1].__str__() + "\n")
+
         self.__matrix_time = np.delete(self.__matrix_time, 0, axis=0)
         self.__matrix_is_complete = np.delete(self.__matrix_is_complete, 0, axis=0)
-        # stat.write("all time: " + np.sum(self.__matrix_time, axis=0).__str__())
         stat.close()
 
     def __start_tests_wo_ref(self, path_test, tests):
@@ -189,18 +195,22 @@ class Kernel:
         is_valid &= t
 
         if os.path.isfile(path_cmp):
-            self.__cmp = self.__is_equal_file_user(path_cmp)
+            if path_cmp.find('.py') != -1:
+                self.__cmp = self.__is_equal_file_user_py(path_cmp)
+            else:
+                self.__cmp = self.__is_equal_file_user(path_cmp)
         else:
             message += "path comparator\n"
         return is_valid, message
 
-    def start_test_by_path(self, path_exe, path_test, params, path_res, path_reference, path_cmp, interpolation_string):
+    def start_test_by_path(self, path_exe, path_test, params, path_res, path_reference, path_cmp, _template_call):
         self.__program = path_exe
         self.params = [min(params), max(params)]    
         self.__output = path_res
         is_valid, message = self.__validation(path_test, path_reference, path_cmp)
         if not is_valid:
             return None, message
+        self.__template_call = path_exe + ' ' +_template_call
         self.__output += slash + 'results'
         if os.path.isdir(self.__output):
             shutil.rmtree(self.__output)
@@ -370,7 +380,6 @@ class MainWindow(QWidget):
         interpolation_string = self.param_line_edit.text()
         # result, message = self.kernel.start_test_by_path(path_exe, path_test, params, path_res, path_reference, cmp,
         #                                                 self.progressive_window.get_test_setter())
-
         result, message = self.kernel.start_test_by_path(d[0], d[1], d[2], d[3], d[4], d[5], interpolation_string)
 
         if result is None:
@@ -605,7 +614,7 @@ def data_for_test():
             [1, 4],  # 2
             this_path + slash + 'test',  # 3
             this_path + slash + 'test' + slash + 'reference',  # 4
-            this_path + slash + 'test' + slash + 'cmp.exe']  # 5
+            this_path + slash + 'test' + slash + 'cmp.py']  # 5
 
 
 class TestKernel(unittest.TestCase):
@@ -713,11 +722,8 @@ class TestKernel(unittest.TestCase):
 if __name__ == "__main__":
     # unittest.main()
     app = QApplication(sys.argv)
-    print("5, 9")
     # time.sleep(10)
     ex = MainWindow()
-    ex.on_calc_click()
+    #ex.on_calc_click()
     ex.show()
-    # ex.set_test_status(1, 9)
     sys.exit(app.exec_())
-    # ex = ProgressWindow()
