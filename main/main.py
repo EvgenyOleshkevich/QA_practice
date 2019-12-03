@@ -194,7 +194,7 @@ class Kernel:
             message += "path comparator\n"
         return is_valid, message
 
-    def start_test_by_path(self, path_exe, path_test, params, path_res, path_reference, path_cmp):
+    def start_test_by_path(self, path_exe, path_test, params, path_res, path_reference, path_cmp, use_string_interpolation):
         self.__program = path_exe
         self.params = [min(params), max(params)]
         self.__output = path_res
@@ -298,10 +298,14 @@ class MainWindow(QWidget):
         calc_button = QPushButton("Start Testing")
         calc_button.clicked.connect(self.on_calc_click)
 
+        self.use_interpolation_checkBox = QCheckBox("Using interpolation string")
+
         main_vertical_layout.addStretch(1)
         main_vertical_layout.addWidget(test_scenario_label)
         main_vertical_layout.addStretch(0)
         main_vertical_layout.addWidget(self.test_scenario_path)
+        main_vertical_layout.addStretch(0.1)
+        main_vertical_layout.addWidget(self.use_interpolation_checkBox)
         main_vertical_layout.addStretch(1)
         main_vertical_layout.addWidget(path_tests_label)
         main_vertical_layout.addStretch(0)
@@ -362,8 +366,8 @@ class MainWindow(QWidget):
         d = data_for_test()
         # result, message = self.kernel.start_test_by_path(path_exe, path_test, params, path_res, path_reference, cmp,
         #                                                 self.progressive_window.get_test_setter())
-
-        result, message = self.kernel.start_test_by_path(d[0], d[1], d[2], d[3], d[4], d[5])
+        use_string_interpolation = self.use_interpolation_checkBox.isChecked()
+        result, message = self.kernel.start_test_by_path(d[0], d[1], d[2], d[3], d[4], d[5], False)
 
         if result is None:
             self.error_window.set_title("Error!")
