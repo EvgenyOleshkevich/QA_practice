@@ -194,9 +194,9 @@ class Kernel:
             message += "path comparator\n"
         return is_valid, message
 
-    def start_test_by_path(self, path_exe, path_test, params, path_res, path_reference, path_cmp, use_string_interpolation):
+    def start_test_by_path(self, path_exe, path_test, params, path_res, path_reference, path_cmp, interpolation_string):
         self.__program = path_exe
-        self.params = [min(params), max(params)]
+        self.params = [min(params), max(params)]    
         self.__output = path_res
         is_valid, message = self.__validation(path_test, path_reference, path_cmp)
         if not is_valid:
@@ -298,14 +298,13 @@ class MainWindow(QWidget):
         calc_button = QPushButton("Start Testing")
         calc_button.clicked.connect(self.on_calc_click)
 
-        self.use_interpolation_checkBox = QCheckBox("Using interpolation string")
+        self.param_line_edit = QLineEdit()
+        self.param_line_edit_label = QLabel("Interpolation string")
 
         main_vertical_layout.addStretch(1)
         main_vertical_layout.addWidget(test_scenario_label)
         main_vertical_layout.addStretch(0)
         main_vertical_layout.addWidget(self.test_scenario_path)
-        main_vertical_layout.addStretch(0.1)
-        main_vertical_layout.addWidget(self.use_interpolation_checkBox)
         main_vertical_layout.addStretch(1)
         main_vertical_layout.addWidget(path_tests_label)
         main_vertical_layout.addStretch(0)
@@ -324,6 +323,10 @@ class MainWindow(QWidget):
         main_vertical_layout.addWidget(path_comp_label)
         main_vertical_layout.addStretch(0)
         main_vertical_layout.addWidget(self.path_comp_path)
+        main_vertical_layout.addStretch(1)
+        main_vertical_layout.addWidget(self.param_line_edit_label)
+        main_vertical_layout.addStretch(0)
+        main_vertical_layout.addWidget(self.param_line_edit)
         main_vertical_layout.addStretch(1)
         main_vertical_layout.addWidget(calc_button)
 
@@ -364,10 +367,11 @@ class MainWindow(QWidget):
         path_res = self.path_result_path.text()
         cmp = self.path_comp_path.text()
         d = data_for_test()
+        interpolation_string = self.param_line_edit.text()
         # result, message = self.kernel.start_test_by_path(path_exe, path_test, params, path_res, path_reference, cmp,
         #                                                 self.progressive_window.get_test_setter())
-        use_string_interpolation = self.use_interpolation_checkBox.isChecked()
-        result, message = self.kernel.start_test_by_path(d[0], d[1], d[2], d[3], d[4], d[5], False)
+
+        result, message = self.kernel.start_test_by_path(d[0], d[1], d[2], d[3], d[4], d[5], interpolation_string)
 
         if result is None:
             self.error_window.set_title("Error!")
