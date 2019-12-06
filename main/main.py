@@ -12,10 +12,12 @@ from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 from threading import Thread
 
-# slash = '/' # linux
-slash = '\\'  # windows
+slash = '/'  # linux
 
-#'b\'1\\r\\n\''
+
+# slash = '\\'  # windows
+
+# 'b\'1\\n\''
 class Data:
     def get_time(self, mask): return self.matrix_time[mask]
 
@@ -76,7 +78,8 @@ class Kernel:
         def func(path1, path2):
             if not os.path.isfile(path1) or not os.path.isfile(path1):
                 return False
-            return subprocess.check_output(['python', path, path1, path2]).__str__() == 'b\'1\\r\\n\''
+            y = subprocess.check_output(['python', path, path1, path2]).__str__()
+            return y == 'b\'1\\n\''
 
         return func
 
@@ -94,8 +97,10 @@ class Kernel:
         is_complete = np.array([False for i in range(self.params[1] + 1 - self.params[0])])
         for i in range(int(self.params[1] + 1 - self.params[0])):
             param = (i + self.params[0]).__str__()
-            res = res_i + slash + param + '.txt'
+            # res = res_i + slash + param + '.txt'
+            res = res_i
             call = string_call.replace('$pathout', res).replace('$paramvalue', param).split()
+            res = res + slash + test + '.out'
 
             timer = time.time()
             subprocess.check_output(call).__str__()
@@ -105,28 +110,35 @@ class Kernel:
             stat.write(test + '; ' + param + '; ' + (time_work[i]).__str__() + '; ' + (is_complete[i]).__str__() + '\n')
         return [time_work, is_complete]
 
-    def __execute_test_wo_ref(self, test, stat):  # without output
+    def __execute_test_wo_ref(self, string_call, test, res_i, stat):
         time_work = -1 * np.ones(int(self.params[1] + 1 - self.params[0]))
+        is_complete = np.array([True for i in range(self.params[1] + 1 - self.params[0])])
         for i in range(int(self.params[1] + 1 - self.params[0])):
             param = (i + self.params[0]).__str__()
+            # res = res_i + slash + param + '.txt'
+            res = res_i
+            call = string_call.replace('$pathout', res).replace('$paramvalue', param).split()
+            res = res + slash + test + '.out'
+
             timer = time.time()
-            subprocess.check_output([self.__program, param, test]).__str__()
+            subprocess.check_output(call).__str__()
             time_work[i] = time.time() - timer
             stat.write(test + '; ' + param + '; ' + (time_work[i]).__str__() + '\n')
-        return time_work
+        return [time_work, is_complete]
 
     def __start_tests(self, path_test, tests, path_reference, references):
         self.__matrix_time = np.array([np.zeros(self.params[1] + 1 - self.params[0])])
         self.__matrix_is_complete = np.array([[False for i in range(self.params[1] + 1 - self.params[0])]])
         stat = open(self.__output + "statistic.csv", 'w')
-
         stat.write("test_name; param; time; result\n")
         for i in range(len(tests)):
             test = path_test + tests[i]
             reference = path_reference + references[i]
             res = self.__output + i.__str__()
             os.mkdir(res)
-            a, b = self.__execute_test(self.__template_call.replace('$pathin', test), test, res, reference, stat)
+            # a, b = self.__execute_test(self.__template_call.replace('$pathin', test), test, res, reference, stat)
+            a, b = self.__execute_test(self.__template_call.replace('$pathin', test), tests[i][0:-4], res, reference,
+                                       stat)
             self.__matrix_time = np.append(self.__matrix_time, [a], axis=0)
             self.__matrix_is_complete = np.append(self.__matrix_is_complete, [b], axis=0)
 
@@ -136,12 +148,18 @@ class Kernel:
 
     def __start_tests_wo_ref(self, path_test, tests):
         self.__matrix_time = np.array([np.zeros(self.params[1] + 1 - self.params[0])])
+        self.__matrix_is_complete = np.array([[False for i in range(self.params[1] + 1 - self.params[0])]])
         stat = open(self.__output + "statistic.csv", 'w')
         stat.write("test_name; param; time\n")
         for i in range(len(tests)):
             test = path_test + tests[i]
-            self.__matrix_time = np.append(self.__matrix_time, [self.__execute_test_wo_ref(test, stat)], axis=0)
+            res = self.__output + i.__str__()
+            os.mkdir(res)
+            a, b = self.__execute_test_wo_ref(self.__template_call.replace('$pathin', test), tests[i][0:-4], res, stat)
+            self.__matrix_time = np.append(self.__matrix_time, [a], axis=0)
+            self.__matrix_is_complete = np.append(self.__matrix_is_complete, [b], axis=0)
         self.__matrix_time = np.delete(self.__matrix_time, 0, axis=0)
+        self.__matrix_is_complete = np.delete(self.__matrix_is_complete, 0, axis=0)
         stat.close()
 
     def __validation(self, path_test, path_reference, path_cmp):
@@ -174,7 +192,7 @@ class Kernel:
             message += "path result\n"
 
         count_reference = 0
-        t = path_reference == "" or os.path.exists(path_reference)
+        t = path_reference == '' or os.path.exists(path_reference)
         if not t:
             message += "path reference\n"
         else:
@@ -189,28 +207,28 @@ class Kernel:
                         break
         is_valid &= t
 
-        t = count_reference == count_test
-        if is_valid and not t:
-            message += 'quantity mismatch reference, test\n'
-        is_valid &= t
-
-        if os.path.isfile(path_cmp):
-            if path_cmp.find('.py') != -1:
-                self.__cmp = self.__is_equal_file_user_py(path_cmp)
+        if path_reference != '':
+            t = count_reference == count_test
+            if is_valid and not t:
+                message += 'quantity mismatch reference, test\n'
+            is_valid &= t
+            if os.path.isfile(path_cmp):
+                if path_cmp.find('.py') != -1:
+                    self.__cmp = self.__is_equal_file_user_py(path_cmp)
+                else:
+                    self.__cmp = self.__is_equal_file_user(path_cmp)
             else:
-                self.__cmp = self.__is_equal_file_user(path_cmp)
-        else:
-            message += "path comparator\n"
+                message += "path comparator\n"
         return is_valid, message
 
     def start_test_by_path(self, path_exe, path_test, params, path_res, path_reference, path_cmp, _template_call):
         self.__program = path_exe
-        self.params = [min(params), max(params)]    
+        self.params = [min(params), max(params)]
         self.__output = path_res
         is_valid, message = self.__validation(path_test, path_reference, path_cmp)
         if not is_valid:
             return None, message
-        self.__template_call = path_exe + ' ' +_template_call
+        self.__template_call = path_exe + ' ' + _template_call
         self.__output += slash + 'results'
         if os.path.isdir(self.__output):
             shutil.rmtree(self.__output)
@@ -219,6 +237,7 @@ class Kernel:
         if os.path.isdir(path_test):  # check path_test is fold or file
             tests = np.array(os.listdir(path_test))
             path_test += slash
+        tests.sort()
 
         if path_reference == "":
             os.mkdir(self.__output)
@@ -231,6 +250,7 @@ class Kernel:
         if os.path.isdir(path_reference):  # check path_reference is    fold or file
             reference = np.array(os.listdir(path_reference))
             path_reference += slash
+        reference.sort()
 
         os.mkdir(self.__output)
         self.__output += slash
@@ -248,7 +268,8 @@ class ProgressWindow(QWidget):
         super().__init__()
         self.main_vertical_layout = QVBoxLayout()
         self.progress_bar = QProgressBar(self)
-        self.progress_label = QLabel("РЎРґРµР»Р°РЅРѕ СЃС‚РѕР»СЊРєРѕ С‚Рѕ С‚РµСЃС‚РѕРІ")
+        self.progress_label = QLabel(
+            "РЎРґРµР»Р°РЅРѕ СЃС‚РѕР»СЊРєРѕ С‚Рѕ С‚РµСЃС‚РѕРІ")
         self.main_vertical_layout.addWidget(self.progress_label)
         self.main_vertical_layout.addWidget(self.progress_bar)
         self.setLayout(self.main_vertical_layout)
@@ -370,17 +391,21 @@ class MainWindow(QWidget):
     def on_calc_click(self):
         path_exe = self.test_scenario_path.text()
         path_test = self.path_tests_path.text()
-        # params =  [2, 4]
         params = [int(self.test_params_value_min.text()), int(self.test_params_value_max.text())]
-
         path_reference = self.path_answers_path.text()
         path_res = self.path_result_path.text()
         cmp = self.path_comp_path.text()
-        d = data_for_test()
         interpolation_string = self.param_line_edit.text()
-        # result, message = self.kernel.start_test_by_path(path_exe, path_test, params, path_res, path_reference, cmp,
-        #                                                 self.progressive_window.get_test_setter())
-        result, message = self.kernel.start_test_by_path(d[0], d[1], d[2], d[3], d[4], d[5], interpolation_string)
+        #print(path_exe)
+        #print(path_test)
+        #print(params)
+        #print(path_reference)
+        #print(path_res)
+        #print(cmp)
+        #print(interpolation_string)
+        result, message = self.kernel.start_test_by_path(path_exe, path_test, params, path_res, path_reference, cmp,
+                                                         interpolation_string)
+        # result, message = self.kernel.start_test_by_path(d[0], d[1], d[2], d[3], d[4], d[5], d[6])
 
         if result is None:
             self.error_window.set_title("Error!")
@@ -455,8 +480,9 @@ class ResultWindow(QWidget):
         else:
             self.main_horizontal_layout.removeWidget(self.result_graph)
             self.result_graph.resize(0, 0)
-            self.result_graph = PlotCanvas(width=8, height=8, curve_status_show=self.curve_status_show, data=self.result,
-                                       test_names=self.test_names)
+            self.result_graph = PlotCanvas(width=8, height=8, curve_status_show=self.curve_status_show,
+                                           data=self.result,
+                                           test_names=self.test_names)
             self.main_horizontal_layout.addWidget(self.result_graph)
 
     def on_curve_show_change(self, number_of_curve, status):
@@ -617,6 +643,17 @@ def data_for_test():
             this_path + slash + 'test' + slash + 'cmp.py']  # 5
 
 
+def data_for_test_cristal():
+    this_path = os.getcwd()
+    return ['/home/eoleshkevich/crystal/run_crystal',  # 0
+            '/home/eoleshkevich/crystal/t',  # 1
+            [2],  # 2
+            '',  # 3
+            '/home/eoleshkevich/crystal/r',  # 4
+            '/home/eoleshkevich/QA_practice/main/test/cmp.py',  # 5
+            '$paramvalue $pathin $pathout']
+
+
 class TestKernel(unittest.TestCase):
     kernel = Kernel()
     d = data_for_test()
@@ -722,8 +759,6 @@ class TestKernel(unittest.TestCase):
 if __name__ == "__main__":
     # unittest.main()
     app = QApplication(sys.argv)
-    # time.sleep(10)
     ex = MainWindow()
-    #ex.on_calc_click()
     ex.show()
     sys.exit(app.exec_())

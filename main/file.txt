@@ -1,0 +1,7 @@
+path to executable scenario file: /home/eoleshkevich/crystal/run_crystal
+path test : /home/eoleshkevich/crystal/t
+params 1 5 (or other params)
+path to write result: '' - default or /home/eoleshkevich/QA_practice/main
+path reference (path to folder with default result): /home/eoleshkevich/crystal/r
+path comporator: /home/eoleshkevich/QA_practice/main/test/cmp.py
+template call(integration string): $paramvalue $pathin $pathout
