@@ -12,6 +12,10 @@ from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 from threading import Thread
 
+# slash = '/' # linux
+slash = '\\'  # windows
+
+#'b\'1\\r\\n\''
 class Data:
     def get_time(self, mask): return self.matrix_time[mask]
 
@@ -63,9 +67,16 @@ class Kernel:
         def func(path1, path2):
             if not os.path.isfile(path1) or not os.path.isfile(path1):
                 return False
-            # y = subprocess.call([path, path1, path2])
-            # y = subprocess.Popen([path, path1, path2])
-            return subprocess.check_output([path, path1, path2]).__str__() == 'b\'True\''
+            return subprocess.check_output([path, path1, path2]).__str__() == 'b\'1\''
+
+        return func
+
+    @staticmethod
+    def __is_equal_file_user_py(path):
+        def func(path1, path2):
+            if not os.path.isfile(path1) or not os.path.isfile(path1):
+                return False
+            return subprocess.check_output(['python', path, path1, path2]).__str__() == 'b\'1\\r\\n\''
 
         return func
 
@@ -76,17 +87,20 @@ class Kernel:
         self.__matrix_time = np.array([])
         self.__matrix_is_complete = np.array([])
         self.__cmp = self.__is_equal_file_default
+        self.__template_call = ''
 
-    def __execute_test(self, test, res_i, reference, stat):
+    def __execute_test(self, string_call, test, res_i, reference, stat):
         time_work = -1 * np.ones(int(self.params[1] + 1 - self.params[0]))
         is_complete = np.array([False for i in range(self.params[1] + 1 - self.params[0])])
         for i in range(int(self.params[1] + 1 - self.params[0])):
             param = (i + self.params[0]).__str__()
-            res = res_i + "/" + param + ".txt"
-            timer = time.clock()
-            # subprocess.check_call([__program, param, test, res]) with exception
-            subprocess.call([self.__program, param, test, res])  # without exception
-            time_work[i] = time.clock() - timer
+            res = res_i + slash + param + '.txt'
+            call = string_call.replace('$pathout', res).replace('$paramvalue', param).split()
+
+            timer = time.time()
+            subprocess.check_output(call).__str__()
+            time_work[i] = time.time() - timer
+
             is_complete[i] = self.__cmp(res, reference)
             stat.write(test + '; ' + param + '; ' + (time_work[i]).__str__() + '; ' + (is_complete[i]).__str__() + '\n')
         return [time_work, is_complete]
@@ -95,9 +109,9 @@ class Kernel:
         time_work = -1 * np.ones(int(self.params[1] + 1 - self.params[0]))
         for i in range(int(self.params[1] + 1 - self.params[0])):
             param = (i + self.params[0]).__str__()
-            timer = time.clock()
-            subprocess.call([self.__program, param, test])
-            time_work[i] = time.clock() - timer
+            timer = time.time()
+            subprocess.check_output([self.__program, param, test]).__str__()
+            time_work[i] = time.time() - timer
             stat.write(test + '; ' + param + '; ' + (time_work[i]).__str__() + '\n')
         return time_work
 
@@ -105,22 +119,19 @@ class Kernel:
         self.__matrix_time = np.array([np.zeros(self.params[1] + 1 - self.params[0])])
         self.__matrix_is_complete = np.array([[False for i in range(self.params[1] + 1 - self.params[0])]])
         stat = open(self.__output + "statistic.csv", 'w')
-        # stat.write(self.params.__str__() + "\n")
+
         stat.write("test_name; param; time; result\n")
         for i in range(len(tests)):
             test = path_test + tests[i]
             reference = path_reference + references[i]
             res = self.__output + i.__str__()
             os.mkdir(res)
-            a, b = self.__execute_test(test, res, reference, stat)
+            a, b = self.__execute_test(self.__template_call.replace('$pathin', test), test, res, reference, stat)
             self.__matrix_time = np.append(self.__matrix_time, [a], axis=0)
             self.__matrix_is_complete = np.append(self.__matrix_is_complete, [b], axis=0)
-            # stat.write(tests[i] + "\n")
-            # stat.write("time: " + self.__matrix_time[i + 1].__str__() + "\n")
-            # stat.write("result: " + self.__matrix_is_complete[i + 1].__str__() + "\n")
+
         self.__matrix_time = np.delete(self.__matrix_time, 0, axis=0)
         self.__matrix_is_complete = np.delete(self.__matrix_is_complete, 0, axis=0)
-        # stat.write("all time: " + np.sum(self.__matrix_time, axis=0).__str__())
         stat.close()
 
     def __start_tests_wo_ref(self, path_test, tests):
@@ -152,7 +163,7 @@ class Kernel:
                 listdir = os.listdir(path_test)
                 count_test = len(listdir)
                 for file_name in listdir:
-                    if os.path.isdir(path_test + '/' + file_name):
+                    if os.path.isdir(path_test + slash + file_name):
                         t = False
                         message += 'test include dir\n'
                         break
@@ -172,7 +183,7 @@ class Kernel:
                 listdir = os.listdir(path_reference)
                 count_reference = len(listdir)
                 for file_name in listdir:
-                    if os.path.isdir(path_reference + '/' + file_name):
+                    if os.path.isdir(path_reference + slash + file_name):
                         t = False
                         message += 'reference include dir\n'
                         break
@@ -184,30 +195,34 @@ class Kernel:
         is_valid &= t
 
         if os.path.isfile(path_cmp):
-            self.__cmp = self.__is_equal_file_user(path_cmp)
+            if path_cmp.find('.py') != -1:
+                self.__cmp = self.__is_equal_file_user_py(path_cmp)
+            else:
+                self.__cmp = self.__is_equal_file_user(path_cmp)
         else:
             message += "path comparator\n"
         return is_valid, message
 
-    def start_test_by_path(self, path_exe, path_test, params, path_res, path_reference, path_cmp):
+    def start_test_by_path(self, path_exe, path_test, params, path_res, path_reference, path_cmp, _template_call):
         self.__program = path_exe
-        self.params = [min(params), max(params)]
+        self.params = [min(params), max(params)]    
         self.__output = path_res
         is_valid, message = self.__validation(path_test, path_reference, path_cmp)
         if not is_valid:
             return None, message
-        self.__output += '/results'
+        self.__template_call = path_exe + ' ' +_template_call
+        self.__output += slash + 'results'
         if os.path.isdir(self.__output):
             shutil.rmtree(self.__output)
 
         tests = np.array([""])
         if os.path.isdir(path_test):  # check path_test is fold or file
             tests = np.array(os.listdir(path_test))
-            path_test += "/"
+            path_test += slash
 
         if path_reference == "":
             os.mkdir(self.__output)
-            self.__output += "/"
+            self.__output += slash
             self.__start_tests_wo_ref(path_test, tests)
             return Data(self.__matrix_time, self.__matrix_is_complete, path_test + "statistic.txt", tests,
                         self.params), message
@@ -215,10 +230,10 @@ class Kernel:
         reference = np.array([""])
         if os.path.isdir(path_reference):  # check path_reference is    fold or file
             reference = np.array(os.listdir(path_reference))
-            path_reference += "/"
+            path_reference += slash
 
         os.mkdir(self.__output)
-        self.__output += "/"
+        self.__output += slash
         self.__start_tests(path_test, tests, path_reference, reference)
         return Data(self.__matrix_time, self.__matrix_is_complete, path_test + "statistic.txt", tests,
                     self.params), message
@@ -233,7 +248,7 @@ class ProgressWindow(QWidget):
         super().__init__()
         self.main_vertical_layout = QVBoxLayout()
         self.progress_bar = QProgressBar(self)
-        self.progress_label = QLabel("Сделано столько то тестов")
+        self.progress_label = QLabel("РЎРґРµР»Р°РЅРѕ СЃС‚РѕР»СЊРєРѕ С‚Рѕ С‚РµСЃС‚РѕРІ")
         self.main_vertical_layout.addWidget(self.progress_label)
         self.main_vertical_layout.addWidget(self.progress_bar)
         self.setLayout(self.main_vertical_layout)
@@ -293,6 +308,9 @@ class MainWindow(QWidget):
         calc_button = QPushButton("Start Testing")
         calc_button.clicked.connect(self.on_calc_click)
 
+        self.param_line_edit = QLineEdit()
+        self.param_line_edit_label = QLabel("Interpolation string")
+
         main_vertical_layout.addStretch(1)
         main_vertical_layout.addWidget(test_scenario_label)
         main_vertical_layout.addStretch(0)
@@ -316,12 +334,17 @@ class MainWindow(QWidget):
         main_vertical_layout.addStretch(0)
         main_vertical_layout.addWidget(self.path_comp_path)
         main_vertical_layout.addStretch(1)
+        main_vertical_layout.addWidget(self.param_line_edit_label)
+        main_vertical_layout.addStretch(0)
+        main_vertical_layout.addWidget(self.param_line_edit)
+        main_vertical_layout.addStretch(1)
         main_vertical_layout.addWidget(calc_button)
 
         main_horizontal_layout.addLayout(main_vertical_layout)
 
         self.setLayout(main_horizontal_layout)
         self.setGeometry(300, 200, 1280, 720)
+        self.showFullScreen()
         self.setWindowTitle('QLineEdit')
 
     def on_value_changed_min(self):
@@ -346,28 +369,25 @@ class MainWindow(QWidget):
 
     def on_calc_click(self):
         path_exe = self.test_scenario_path.text()
-        # path_exe = "C:/Users/Vladimir/Desktop/QA_practice/пакеты/test/main.exe"
         path_test = self.path_tests_path.text()
-        # path_test = "C:/Users/Vladimir/Desktop/QA_practice/пакеты/test/test"
         # params =  [2, 4]
         params = [int(self.test_params_value_min.text()), int(self.test_params_value_max.text())]
 
-        # path_reference = "C:/Users/Vladimir/Desktop/QA_practice/пакеты/test/reference"
         path_reference = self.path_answers_path.text()
         path_res = self.path_result_path.text()
-        # cmp = "C:/Users/Vladimir/Desktop/QA_practice/пакеты/test/comp.exe"#self.path_comp_path.text()
         cmp = self.path_comp_path.text()
         d = data_for_test()
-        #result, message = self.kernel.start_test_by_path(path_exe, path_test, params, path_res, path_reference, cmp,
+        interpolation_string = self.param_line_edit.text()
+        # result, message = self.kernel.start_test_by_path(path_exe, path_test, params, path_res, path_reference, cmp,
         #                                                 self.progressive_window.get_test_setter())
-
-        result, message = self.kernel.start_test_by_path(d[0], d[1], d[2], d[3], d[4], d[5])
+        result, message = self.kernel.start_test_by_path(d[0], d[1], d[2], d[3], d[4], d[5], interpolation_string)
 
         if result is None:
             self.error_window.set_title("Error!")
             self.error_window.set_error(message)
             self.error_window.show()
         else:
+            print(result.get_time([True for i in range(result.get_tests_count())]))
             self.mask = [True for i in range(result.get_tests_count())]
             test_info = get_configuration_list(result, self.mask)
             self.result = ResultWindow(test_info)
@@ -404,6 +424,12 @@ class ResultWindow(QWidget):
         self.scroll.setWidget(group_box)
         self.scroll.setWidgetResizable(True)
 
+        self.left_vertical_layout = QVBoxLayout()
+        self.left_vertical_layout.addWidget(self.scroll)
+        self.sum_check_box = QCheckBox("Display result Sum")
+        self.sum_check_box.stateChanged.connect(self.on_sum_show_change)
+        self.left_vertical_layout.addWidget(self.sum_check_box)
+
         self.curve_status_show = [True for i in range(len(result_data))]
 
         self.test_names = [test[0].name for test in result_data]
@@ -412,13 +438,29 @@ class ResultWindow(QWidget):
                                        test_names=self.test_names)
         self.main_horizontal_layout = QHBoxLayout()
         self.main_horizontal_layout.setAlignment(Qt.AlignRight)
-        self.main_horizontal_layout.addWidget(self.scroll)
+        self.main_horizontal_layout.addLayout(self.left_vertical_layout)
         self.main_horizontal_layout.addWidget(self.result_graph)
         self.main_horizontal_layout.setAlignment(Qt.AlignLeft)
 
         self.setLayout(self.main_horizontal_layout)
 
+    def on_sum_show_change(self):
+        if not (not self.sum_check_box.checkState() == Qt.Checked):
+            self.main_horizontal_layout.removeWidget(self.result_graph)
+            self.result_graph.resize(0, 0)
+            self.result_graph = PlotCanvasSum(width=8, height=8, curve_status_show=self.curve_status_show,
+                                              data=self.result,
+                                              test_names=self.test_names)
+            self.main_horizontal_layout.addWidget(self.result_graph)
+        else:
+            self.main_horizontal_layout.removeWidget(self.result_graph)
+            self.result_graph.resize(0, 0)
+            self.result_graph = PlotCanvas(width=8, height=8, curve_status_show=self.curve_status_show, data=self.result,
+                                       test_names=self.test_names)
+            self.main_horizontal_layout.addWidget(self.result_graph)
+
     def on_curve_show_change(self, number_of_curve, status):
+        self.sum_check_box.setChecked(False)
         self.curve_status_show[number_of_curve] = status
         self.main_horizontal_layout.removeWidget(self.result_graph)
         self.result_graph.resize(0, 0)
@@ -457,6 +499,34 @@ class ResultWindow(QWidget):
         item_layout.addLayout(sub_items_layout)
         item_layout.addStretch(0)
         return item_layout
+
+
+class PlotCanvasSum(FigureCanvas):
+    def __init__(self, width=7, height=7, dpi=80, data=None, curve_status_show=None, test_names=[]):
+        if curve_status_show is None:
+            curve_status_show = []
+        fig = Figure(figsize=(width, height), dpi=dpi)
+        FigureCanvas.__init__(self, fig)
+
+        self.plot(data, curve_status_show)
+        self.draw()
+
+    def plot(self, data_list, curve_status_show):
+        ax = self.figure.add_subplot(111)
+        sum_y = np.zeros_like(data_list[0])
+        x = np.array([current_test.param_value for current_test in data_list[-1]])
+        for test in range(len(data_list)):
+            if curve_status_show[test]:
+                y = np.array([current_test.time for current_test in data_list[test]])
+                sum_y += y
+        ax.plot(x, sum_y, label="Test: Result sum")
+        ax.scatter(x=x, y=sum_y, color="red")
+
+        ax.legend()
+        ax.set_ylabel("Execution time")
+        ax.set_xlabel("Param value")
+        ax.grid()
+        ax.set_title("Tasks Graph")
 
 
 class PlotCanvas(FigureCanvas):
@@ -539,12 +609,12 @@ import unittest
 
 def data_for_test():
     this_path = os.getcwd()
-    return [this_path + "/test/main.exe", # 0
-            this_path + "/test/test",     # 1
-            [1, 4],                         # 2
-            this_path + "/test",           # 3
-            this_path + "/test/reference",# 4
-            this_path + "/test/comp.exe"] # 5
+    return [this_path + slash + 'test' + slash + 'main.exe',  # 0
+            this_path + slash + 'test' + slash + 'test',  # 1
+            [1, 4],  # 2
+            this_path + slash + 'test',  # 3
+            this_path + slash + 'test' + slash + 'reference',  # 4
+            this_path + slash + 'test' + slash + 'cmp.py']  # 5
 
 
 class TestKernel(unittest.TestCase):
@@ -558,10 +628,10 @@ class TestKernel(unittest.TestCase):
     # corrects
 
     def test_error_window_title(self):
-       self.assertEqual("Error!", self.error_window.windowTitle())
+        self.assertEqual("Error!", self.error_window.windowTitle())
 
     def test_error_window_content(self):
-       self.assertEqual("Some errors!", self.error_window.error_text.text())
+        self.assertEqual("Some errors!", self.error_window.error_text.text())
 
     def test_correct_1(self):
         res, message = self.kernel.start_test_by_path(self.d[0], self.d[1], self.d[2], self.d[3], self.d[4], self.d[5])
@@ -569,41 +639,41 @@ class TestKernel(unittest.TestCase):
         self.assertEqual(message, "")
 
     def test_correct_2(self):
-        res, message = self.kernel.start_test_by_path(self.d[0], self.d[1] + '/test1.txt', self.d[2],
-                                                      self.d[3], self.d[4] + '/res2.txt', self.d[5])
+        res, message = self.kernel.start_test_by_path(self.d[0], self.d[1] + slash + 'test1.txt', self.d[2],
+                                                      self.d[3], self.d[4] + slash + 'res2.txt', self.d[5])
         self.assertTrue(res is not None)
         self.assertEqual(message, "")
 
     def test_correct_3(self):
         res, message = self.kernel.start_test_by_path(self.d[0], self.d[1] + '2', self.d[2],
-                                                      self.d[3], self.d[4] + '/res1.txt', self.d[5])
+                                                      self.d[3], self.d[4] + slash + 'res1.txt', self.d[5])
         self.assertTrue(res is not None)
         self.assertEqual(message, "")
 
     # errors
 
     def test_program_not_correct(self):
-        res, message = self.kernel.start_test_by_path('c:/mIN.exe', self.d[1], self.d[2],
+        res, message = self.kernel.start_test_by_path('c:\\mIN.exe', self.d[1], self.d[2],
                                                       self.d[3], self.d[4], self.d[5])
         self.assertTrue(res is None)
         self.assertEqual(message, 'path program\n')
 
     def test_not_correct(self):
-        res, message = self.kernel.start_test_by_path(self.d[0], 'c:/main', self.d[2],
+        res, message = self.kernel.start_test_by_path(self.d[0], 'c:\\main', self.d[2],
                                                       self.d[3], self.d[4], self.d[5])
         self.assertTrue(res is None)
         self.assertEqual(message, 'path test\n')
 
     def test_include_dir(self):
-        os.mkdir(self.d[1] + '/temp')
+        os.mkdir(self.d[1] + '\\temp')
         res, message = self.kernel.start_test_by_path(self.d[0], self.d[1], self.d[2],
                                                       self.d[3], self.d[4], self.d[5])
         self.assertTrue(res is None)
         self.assertEqual(message, "test include dir\n")
-        os.rmdir(self.d[1] + '/temp')
+        os.rmdir(self.d[1] + '\\temp')
 
     def test_and_program_not_correct(self):
-        res, message = self.kernel.start_test_by_path('c:/mIN.exe', 'c:/main', self.d[2],
+        res, message = self.kernel.start_test_by_path('c:\\mIN.exe', 'c:\\main', self.d[2],
                                                       self.d[3], self.d[4], self.d[5])
         self.assertTrue(res is None)
         self.assertEqual(message, 'path program\npath test\n')
@@ -615,21 +685,21 @@ class TestKernel(unittest.TestCase):
         self.assertEqual(message, 'path reference\n')
 
     def test_reference_include_dir(self):
-        os.mkdir(self.d[4] + '/temp')
+        os.mkdir(self.d[4] + slash + 'temp')
         res, message = self.kernel.start_test_by_path(self.d[0], self.d[1], self.d[2],
                                                       self.d[3], self.d[4], self.d[5])
         self.assertTrue(res is None)
         self.assertEqual(message, 'reference include dir\n')
-        os.rmdir(self.d[4] + '/temp')
+        os.rmdir(self.d[4] + slash + 'temp')
 
     def test_mismatch_test_reference_1(self):
         res, message = self.kernel.start_test_by_path(self.d[0], self.d[1], self.d[2],
-                                                      self.d[3], self.d[4] + '/res1.txt', self.d[5])
+                                                      self.d[3], self.d[4] + slash + 'res1.txt', self.d[5])
         self.assertTrue(res is None)
         self.assertEqual(message, 'quantity mismatch reference, test\n')
 
     def test_mismatch_test_reference_2(self):
-        res, message = self.kernel.start_test_by_path(self.d[0], self.d[1] + '/test1.txt', self.d[2],
+        res, message = self.kernel.start_test_by_path(self.d[0], self.d[1] + slash + 'test1.txt', self.d[2],
                                                       self.d[3], self.d[4], self.d[5])
         self.assertTrue(res is None)
         self.assertEqual(message, 'quantity mismatch reference, test\n')
@@ -644,17 +714,16 @@ class TestKernel(unittest.TestCase):
 
     def test_cmp_not_correct(self):
         res, message = self.kernel.start_test_by_path(self.d[0], self.d[1], self.d[2],
-                                                      self.d[3],  self.d[4], self.d[4])
+                                                      self.d[3], self.d[4], self.d[4])
         self.assertTrue(res is not None)
         self.assertEqual(message, 'path comparator\n')
 
 
 if __name__ == "__main__":
-    unittest.main()
+    # unittest.main()
     app = QApplication(sys.argv)
-    print("5, 9")
-    time.sleep(10)
-    # ex.show()
-    # ex.set_test_status(1, 9)
-    # sys.exit(app.exec_())
-    # ex = ProgressWindow()
+    # time.sleep(10)
+    ex = MainWindow()
+    #ex.on_calc_click()
+    ex.show()
+    sys.exit(app.exec_())
